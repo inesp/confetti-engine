@@ -50,11 +50,12 @@ def load_and_validate_conferences() -> tuple[list[Conference], list[ConfError]]:
     """
     global _cache
     fingerprint = _sources_fingerprint()
-    if _cache is not None and _cache[0] == fingerprint:
-        return _cache[1]
-    result = _load_and_validate_conferences()
-    _cache = (fingerprint, result)
-    return result
+    if _cache is None or _cache[0] != fingerprint:
+        _cache = (fingerprint, _load_and_validate_conferences())
+    conferences, errors = _cache[1]
+    # Return copies so callers can't mutate the cached lists (the home page appends
+    # its own warnings, which would otherwise pile up in the cache on every view).
+    return list(conferences), list(errors)
 
 
 def _load_and_validate_conferences() -> tuple[list[Conference], list[ConfError]]:
