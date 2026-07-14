@@ -73,6 +73,17 @@ def _filter_conferences(
 
         next_event = conf.next_event
 
+        year_entry = conf.years.get(next_event.edition_year) if next_event.edition_year else None
+        if year_entry is not None and year_entry.skip:
+            skipped.append(
+                ScoutResult(
+                    conf=conf,
+                    outcome=f"Skipped for {next_event.edition_year}",
+                    reason=SkipReason.skipped,
+                )
+            )
+            continue
+
         if next_event.conference_start_is_factual and next_event.cfp_open_is_factual:
             assert next_event.conference_start is not None
             assert next_event.cfp_open is not None

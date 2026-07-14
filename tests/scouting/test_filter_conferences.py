@@ -79,3 +79,22 @@ def test_factual_cfp_open_and_close_and_conference_start_all_known(mock_date, mo
     assert to_scout == []
     assert len(skipped) == 1
     assert skipped[0].reason == SkipReason.all_dates_known
+
+
+@patch("confetti.models.date")
+@patch("confetti.scouting.confs.date")
+def test_year_marked_skip_is_not_scouted(mock_date, mock_models_date):
+    mock_date.today.return_value = date(2026, 3, 1)
+    mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
+    mock_models_date.today.return_value = date(2026, 3, 1)
+    mock_models_date.side_effect = lambda *args, **kw: date(*args, **kw)
+    # Without the year skip, this conf would be scouted (CFP presumably opening now)
+    conf = _conf(
+        years={2026: YearEntry(skip=True)},
+        cfp=Cfp(url=None, site=None, formats=None, notes=None, presumed_open="03-01", presumed_close="04-15"),
+        presumed=Presumed(conference_start="06-10"),
+    )
+    to_scout, skipped = _filter_conferences([conf])
+    assert to_scout == []
+    assert len(skipped) == 1
+    assert skipped[0].reason == SkipReason.skipped
