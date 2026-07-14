@@ -1,0 +1,43 @@
+# budget: full, difficulty: moderate, past edition, talk accepted, costs fully covered.
+- name: "Fauxcon"
+  city: "Lisbon"
+  country: "Portugal"
+  website: "https://example.com/fauxcon"
+
+  cfp:
+    url: "https://sessionize.com/fauxcon"
+    site: "sessionize"
+    formats: "45min, lightning 10min"
+    notes: "Two rounds, blind review"
+    presumed_open: "01-10"
+    presumed_close: "02-28"
+
+  budget: full
+  difficulty: moderate
+  topic_fit: "example-async, example-testing"
+  notes: "Big general crowd, records everything, pays travel and hotel."
+
+  presumed:
+    conference_start: "05-14"
+    conference_end: "05-16"
+
+  years:
+    2026:
+      cfp_open: 2026-01-08
+      cfp_close: 2026-02-25
+      notify: "Decisions by 20 Mar"
+      conference_start: 2026-05-14
+      conference_end: 2026-05-16
+      cost:
+        flight: 180
+        hotel: 320
+        extra: 90
+        promised: 600
+        covered: 600
+      vacation_days: 1
+      talks:
+        - talk: example-async
+          status: accepted
+          title: "Example Talk: Async Things"
+          talk_start: 2026-05-15 11:00
+          talk_duration: 45

@@ -1,0 +1,41 @@
+# budget: partial, difficulty: hard, future edition, talk submitted, money owed (covered < promised).
+- name: "Nimbus North Summit"
+  city: "Oslo"
+  country: "Norway"
+  website: "https://example.com/nimbus-north"
+
+  cfp:
+    url: "https://example.com/nimbus-north/cfp"
+    site: "own"
+    formats: "30min"
+    notes: ""
+    presumed_open: "03-01"
+    presumed_close: "04-15"
+
+  budget: partial
+  difficulty: hard
+  topic_fit: "example-observability"
+  notes: "Platform and infra audience. Covers hotel, not flights."
+
+  presumed:
+    conference_start: "09-22"
+    conference_end: "09-23"
+
+  years:
+    2026:
+      cfp_open: 2026-03-02
+      cfp_close: 2026-04-14
+      notify: "Rolling"
+      conference_start: 2026-09-22
+      conference_end: 2026-09-23
+      cost:
+        flight: 260
+        hotel: 400
+        extra: 120
+        promised: 400
+        covered: 0
+      vacation_days: 2
+      talks:
+        - talk: example-observability
+          status: submitted
+          title: "Example Talk: Observability"

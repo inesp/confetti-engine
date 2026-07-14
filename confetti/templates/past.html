@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% from "components/difficulty.html" import difficulty_icon %}
+{% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
+{% from "components/money.html" import money %}
+
+{% block extra_head %}
+<style>
+  .hide-money .money { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="past-content">
+
+<div class="flex justify-end mb-4">
+  <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+    <span class="text-gray-500">Show costs</span>
+    <div class="relative" style="width: 36px; height: 20px;">
+      <input type="checkbox" id="money-toggle" class="sr-only peer" checked>
+      <div class="absolute inset-0 bg-gray-300 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
+      <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+    </div>
+  </label>
+</div>
+
+<!-- Year-by-year timeline -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
+
+  <div class="relative pl-8">
+    <!-- Vertical line -->
+    <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+
+    {% for year, confs in years.items() %}
+    <div class="mb-6 relative">
+      <!-- Year dot -->
+      <div class="absolute top-1 w-4 h-4 bg-indigo-500 rounded-full border-2 border-white shadow" style="left: -1.75rem"></div>
+      <div class="flex items-baseline gap-3 mb-3">
+        <h4 class="text-lg font-bold text-indigo-600">{{ year }}</h4>
+        {% set ys = year_summaries[year] %}
+        <span class="text-gray-500">{{ ys.conf_count }} conference{{ 's' if ys.conf_count != 1 }} · {{ ys.vacation_days }} vacation day{{ 's' if ys.vacation_days != 1 }}{% if ys.total > 0 %} · {% call money() %}{{ ys.total|int }}€ total · <span class="relative group/oop cursor-default">{{ ys.out_of_pocket|int }}€ out of pocket<div class="hidden group-hover/oop:block absolute left-0 top-full pt-1 z-10"><div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">{% for pc in confs %}{% if pc.cost %}<div>{{ pc.conf.name }}: {{ (pc.cost.total - pc.cost.effective_covered)|int }}€</div>{% endif %}{% endfor %}</div></div></span>{% if ys.out_of_pocket_after_promised != ys.out_of_pocket %} now · {{ ys.out_of_pocket_after_promised|int }}€ once promised {% endif %}{% endcall %}{% endif %}</span>
+      </div>
+
+      {% set dots, months = year_dots[year] %}
+      {% if dots %}
+      <div class="relative h-10 mb-3">
+        {% for m in months %}
+        <div class="absolute top-0 bottom-0 border-l border-dashed border-gray-200" style="left: {{ m.position_pct }}%;">
+          <span class="absolute text-gray-400" style="font-size: 11px; top: 0; left: 3px;">{{ m.label }}</span>
+        </div>
+        {% endfor %}
+        {% for dot in dots %}
+        <div class="absolute top-5 w-3 h-3 rounded-full bg-indigo-400 -ml-1.5 group/dot" style="left: {{ dot.position_pct }}%;">
+          {% call hover_popup(position="above", align="center", group_name="group/dot") %}
+            {{ conf_tooltip(dot.conf) }}
+          {% endcall %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {% for pc in confs %}
+        {% set is_future = pc.conference_start and pc.conference_start > today %}
+        <div class="rounded-lg border-[3px] {% if is_future %}border-green-200 bg-white{% else %}border-green-300 bg-white{% endif %}">
+          <div class="{% if is_future %}bg-green-50{% else %}bg-green-100{% endif %} px-3 py-2">
+            <a href="{{ pc.conf.website }}" target="_blank" class="font-semibold {% if is_future %}text-gray-500{% else %}text-green-900{% endif %} hover:text-green-600">{{ pc.conf.name }}</a>
+            <a href="{{ url_for('conferences.detail', conf_name=pc.conf.name) }}" class="text-gray-400 hover:text-blue-600 ml-1" title="Details">&#9998;</a>
+          </div>
+          <div class="px-3 py-2">
+            <div class="{% if is_future %}text-gray-400{% else %}text-gray-700{% endif %}">
+              📍 {{ pc.conf.city }}, {{ pc.conf.country }}
+            </div>
+            {% if pc.conference_start %}
+            <div class="{% if is_future %}text-gray-300{% else %}text-gray-500{% endif %} mt-1">
+              {{ pc.conference_start.strftime('%d. %b') }}{% if pc.conference_end and pc.conference_end != pc.conference_start %}–{{ pc.conference_end.strftime('%d. %b') }}{% endif %}
+            </div>
+            {% endif %}
+            {% set accepted_talks = pc.talks | selectattr('status', 'equalto', 'accepted') | list %}
+            {% if accepted_talks %}
+            <div class="mt-2 pt-2 border-t border-green-200">
+              {% for t in accepted_talks %}
+              <div class="{% if is_future %}text-gray-400{% else %}text-gray-600{% endif %}">{{ t.title or t.talk }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="mt-2 pt-2 border-t border-green-200 {% if is_future %}text-gray-400{% else %}text-gray-600{% endif %} relative group/cost">
+              {% call money() %}
+              {% if pc.cost %}
+              💰 {{ pc.cost.total }}€ · {{ pc.cost.covered or 0 }}€ covered{% if pc.cost.promised is not none and pc.cost.promised != (pc.cost.covered or 0) %} <span class="text-gray-400">(of {{ pc.cost.promised|int }}€ promised)</span>{% endif %}{% if pc.cost.owed %} <span class="text-amber-600">· {{ pc.cost.owed|int }}€ owed</span>{% endif %}
+              {% call hover_popup(position="above", group_name="group/cost") %}
+                <div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">
+                  ✈️ Flight: {{ pc.cost.flight or 0 }}€ · 🏨 Hotel: {{ pc.cost.hotel or 0 }}€{% if pc.cost.extra %} · ➕ Extra: {{ pc.cost.extra }}€{% endif %}
+                </div>
+              {% endcall %}
+              {% else %}
+              ⚠️ Cost missing
+              {% endif %}
+              {% endcall %}
+              📅 Vacation: {{ pc.vacation_days }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Resources spent -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Resources spent</h3>
+
+  <div class="mb-8 space-y-2">
+    {% for year, summary in year_summaries.items() %}
+    <div class="flex items-center gap-3">
+      <span class="w-12 font-semibold text-gray-900 tabular-nums">{{ year }}</span>
+      <div class="flex gap-1">
+        {% for i in range(summary.conf_count) %}
+        <div class="w-5 h-5 rounded-full bg-indigo-400"></div>
+        {% endfor %}
+      </div>
+      <span class="text-gray-500">{{ summary.conf_count }} conf{{ 's' if summary.conf_count != 1 }}, {{ summary.conf_days }} conf day{{ 's' if summary.conf_days != 1 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <table class="w-full text-left tabular-nums mb-8">
+    <thead>
+      <tr class="text-gray-500 border-b border-gray-200">
+        <th class="py-2 font-medium">Year</th>
+        <th class="py-2 font-medium">Vacation</th>
+        <th class="py-2 font-medium">Total cost</th>
+        <th class="py-2 font-medium">My money now</th>
+        <th class="py-2 font-medium">My money after payback</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for year, summary in year_summaries.items() %}
+      <tr class="border-b border-gray-100">
+        <td class="py-2 font-semibold text-gray-900">{{ year }}</td>
+        <td class="py-2 text-gray-700">{{ summary.vacation_days }}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.total) }}€ <span class="text-gray-400">{{ "{:,.0f}".format(summary.flight) }}€ flights · {{ "{:,.0f}".format(summary.hotel) }}€ hotels{% if summary.extra > 0 %} · {{ "{:,.0f}".format(summary.extra) }}€ extra{% endif %}</span>{% endcall %}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.out_of_pocket) }}€ <span class="text-gray-400">({{ "{:,.0f}".format(summary.covered) }}€ covered)</span>{% endcall %}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.out_of_pocket_after_promised) }}€ <span class="text-gray-400">({{ "{:,.0f}".format(summary.promised) }}€ promised)</span>{% endcall %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h4 class="font-semibold text-gray-900 mb-3">Per conference / per conference day</h4>
+  <table class="w-full text-left tabular-nums">
+    <thead>
+      <tr class="text-gray-500 border-b border-gray-200">
+        <th class="py-2 font-medium">Year</th>
+        <th class="py-2 font-medium">Conf days</th>
+        <th class="py-2 font-medium">Out of pocket / conf</th>
+        <th class="py-2 font-medium">Out of pocket / conf day</th>
+        <th class="py-2 font-medium">Vacation / conf</th>
+        <th class="py-2 font-medium">Vacation / conf day</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for year, summary in year_summaries.items() %}
+      <tr class="border-b border-gray-100">
+        <td class="py-2 font-semibold text-gray-900">{{ year }}</td>
+        <td class="py-2 text-gray-700">{{ summary.conf_days }}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.cost_per_conf) }}€{% endcall %}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.cost_per_conf_day) }}€{% endcall %}</td>
+        <td class="py-2 text-gray-700">{{ summary.vacation_per_conf }}</td>
+        <td class="py-2 text-gray-700">{{ summary.vacation_per_conf_day }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Per-talk acceptance rates -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Acceptance rate per talk</h3>
+
+  <div class="space-y-4">
+    {% for ts in talk_stats %}
+    <div class="border border-gray-100 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-medium text-gray-900">{{ ts.talk.title }}</span>
+        <span class="text-sm font-semibold
+          {% if ts.total_count == 0 %}text-gray-400
+          {% elif ts.acceptance_rate >= 50 %}text-green-600
+          {% elif ts.acceptance_rate >= 30 %}text-yellow-600
+          {% else %}text-red-600{% endif %}
+        ">{{ ts.accepted_count }}/{{ ts.total_count }} ({{ "%.0f"|format(ts.acceptance_rate) }}%){% if ts.total_count_with_sidelined != ts.total_count %} · {{ ts.accepted_count }}/{{ ts.total_count_with_sidelined }} with sidelined ({{ "%.0f"|format(ts.acceptance_rate_with_sidelined) }}%){% endif %}</span>
+      </div>
+      <!-- Progress bar -->
+      <div class="w-full bg-gray-100 rounded-full h-2 mb-3">
+        <div class="h-2 rounded-full
+          {% if ts.total_count == 0 %}bg-gray-300
+          {% elif ts.acceptance_rate >= 50 %}bg-green-500
+          {% elif ts.acceptance_rate >= 30 %}bg-yellow-500
+          {% else %}bg-red-400{% endif %}
+        " style="width: {{ ts.acceptance_rate if ts.total_count > 0 else 100 }}%"></div>
+      </div>
+      <!-- Submission details -->
+      <div class="space-y-1">
+        {% for sub in ts.submissions %}
+        <div class="flex items-center text-sm">
+          <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0
+            {% if sub.status == 'accepted' %}bg-green-500
+            {% elif sub.status == 'sidelined' %}bg-amber-400
+            {% elif sub.status == 'rejected' %}bg-red-400
+            {% elif sub.status == 'waitlisted' %}bg-purple-400
+            {% elif sub.status == 'withdrawn' %}bg-orange-400
+            {% else %}bg-gray-300{% endif %}
+          "></div>
+          <span class="text-gray-500 w-10 flex-shrink-0">{{ sub.year }}</span>
+          <span class="text-gray-700 flex-grow">{{ sub.conf_name }}&nbsp;<span class="text-gray-400">{{ sub.country_code }}</span></span>
+          {% if sub.title %}
+          <span class="text-gray-400 text-xs italic ml-2 truncate max-w-xs" title="{{ sub.title }}">as "{{ sub.title }}"</span>
+          {% endif %}
+          <span class="text-xs ml-2 flex-shrink-0
+            {% if sub.status == 'accepted' %}text-green-600
+            {% elif sub.status == 'sidelined' %}text-amber-600
+            {% elif sub.status == 'rejected' %}text-red-500
+            {% elif sub.status == 'waitlisted' %}text-purple-500
+            {% elif sub.status == 'withdrawn' %}text-orange-500
+            {% else %}text-gray-400{% endif %}
+          ">{{ sub.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Conference acceptance rate -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+  <div class="flex items-center justify-between">
+    <h3 class="text-lg font-semibold text-gray-900">Conference acceptance rate</h3>
+    <span class="font-bold text-gray-700">{{ conf_accepted }}/{{ conf_total }} conferences ({{ conf_rate }}%) · {{ conf_accepted }}/{{ conf_total_no_withdrawn }} without withdrawn ({{ conf_rate_no_withdrawn }}%)</span>
+  </div>
+  <div class="w-full bg-gray-100 rounded-full h-2 mt-3">
+    <div class="h-2 rounded-full bg-sky-400" style="width: {{ conf_rate }}%"></div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mt-4">
+    {% for cs in conf_summaries %}
+    <span class="relative group cursor-default">
+      <div class="relative inline-flex items-center px-3 py-1.5 rounded-full text-gray-700
+        {% if cs.rejected == 0 and cs.withdrawn == 0 %}bg-green-100 border border-green-300
+        {% elif cs.accepted == 0 and cs.withdrawn == 0 %}bg-red-50 border border-red-300
+        {% elif cs.accepted == 0 and cs.rejected == 0 %}bg-orange-50 border-2 border-orange-400
+        {% else %}bg-gray-50 border border-gray-300{% endif %}
+      ">
+        {{ cs.name }}&nbsp;<span class="text-gray-400">{{ cs.country_code }}</span>
+        {% if cs.total > 1 %}
+        <span class="flex gap-0.5 ml-1.5">
+          {% if cs.accepted > 0 %}
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-[11px] font-bold">{{ cs.accepted }}</span>
+          {% endif %}
+          {% if cs.rejected > 0 %}
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-400 text-white text-[11px] font-bold">{{ cs.rejected }}</span>
+          {% endif %}
+          {% if cs.withdrawn > 0 %}
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-400 text-white text-[11px] font-bold">{{ cs.withdrawn }}</span>
+          {% endif %}
+        </span>
+        {% endif %}
+      </div>
+      {% if cs.conf %}
+      {% call hover_popup(position="above") %}
+        {{ conf_tooltip(cs.conf) }}
+      {% endcall %}
+      {% endif %}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+</div><!-- #past-content -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const toggle = document.getElementById('money-toggle');
+  const container = document.getElementById('past-content');
+  const hidden = localStorage.getItem('hideMoney') === 'true';
+  if (hidden) {
+    container.classList.add('hide-money');
+    toggle.checked = false;
+  }
+  toggle.addEventListener('change', () => {
+    container.classList.toggle('hide-money', !toggle.checked);
+    localStorage.setItem('hideMoney', !toggle.checked);
+  });
+</script>
+{% endblock %}

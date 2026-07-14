@@ -1,0 +1,55 @@
+# ============================================================
+# Conference YAML Template
+# ============================================================
+# Copy this to create a new conference file.
+# Each file is a list (even if it has just one conference).
+#
+# Required fields: name, city, country, website
+# Optional fields: cfp, presumed, budget, topic_fit, notes, years
+# Year entries can have: cfp_open, cfp_close, notify, conference_start, conference_end, talks, cost
+# cfp has: url, site (sessionize/own/...), formats, notes, presumed_open, presumed_close
+# ============================================================
+
+- name: "Conference Name"          # required
+  city: "City"                     # required
+  country: "Country"               # required
+  website: "https://example.com"    # required — full URL
+
+  cfp:
+    url: "https://sessionize.com/example"
+    site: "sessionize"
+    formats: "45min, lightning 10min"
+    notes: ""
+    presumed_open: "01-15"
+    presumed_close: "03-01"
+
+  budget: full                     # optional — full, partial, ask, none
+  difficulty: moderate             # optional — easy, moderate, hard, longshot
+  topic_fit: ""                    # optional — which of my talks fit
+  notes: ""                        # optional — anything worth remembering
+  skip: false                      # optional — skip scouting and hide from active pipeline
+
+  presumed:
+    conference_start: "06-01"
+    conference_end: "06-02"
+
+  years:                           # optional — add year entries as you go
+    2027:
+       cfp_open: 2027-01-20       # actual dates, as announced
+       cfp_close: 2027-03-05      # optional
+       notify: "Decisions by 5 Apr"  # optional — free text: when/how you hear back
+       conference_start: 2027-06-05  # optional
+       conference_end: 2027-06-06 # optional
+       cost:                        # optional — costs in EUR
+         flight:                   # flight cost
+         hotel:                    # hotel cost
+         extra:                    # other costs (food, transport, etc.)
+         promised:                 # amount the conference committed to cover
+         covered:                  # amount actually covered / landed
+       vacation_days: 0           # how many vacation days for this conference
+       talks:                     # optional — talk submissions for this year
+         - talk: my-talk-id       # references id from talks/talks.yml
+           status: accepted       # submitted / accepted / rejected / waitlisted / withdrawn
+           title: "Title as submitted"  # required
+           talk_start: 2027-06-05 10:00  # optional — when the talk is scheduled
+           talk_duration: 45             # optional — talk duration in minutes

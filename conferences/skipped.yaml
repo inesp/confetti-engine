@@ -1,0 +1,8 @@
+# Conferences to skip during discovery.
+# Add conference names here to prevent them from being suggested again.
+#
+# Example:
+# - SomeConf
+# - Another Conference 2026
+- Example Skipped Conf
+- Another One To Ignore

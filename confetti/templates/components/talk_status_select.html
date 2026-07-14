@@ -1,0 +1,22 @@
+{% macro talk_status_select(conf_name, talk_id, year, current_status, talk_statuses, from_page='index') %}
+<form method="POST" action="{{ url_for('conferences.update_status') }}" class="flex items-center gap-1">
+  <input type="hidden" name="conf_name" value="{{ conf_name }}">
+  <input type="hidden" name="talk_id" value="{{ talk_id }}">
+  <input type="hidden" name="year" value="{{ year }}">
+  <input type="hidden" name="from_page" value="{{ from_page }}">
+  <select name="status" onchange="this.form.submit()"
+    class="px-2 py-1 rounded border cursor-pointer
+    {% if current_status == 'submitted' %}bg-yellow-100 text-yellow-700 border-yellow-200
+    {% elif current_status == 'accepted' %}bg-green-100 text-green-700 border-green-200
+    {% elif current_status == 'rejected' %}bg-red-100 text-red-700 border-red-200
+    {% elif current_status == 'sidelined' %}bg-gray-100 text-gray-500 border-gray-200
+    {% elif current_status == 'waitlisted' %}bg-purple-100 text-purple-700 border-purple-200
+    {% elif current_status == 'withdrawn' %}bg-orange-100 text-orange-700 border-orange-200
+    {% else %}bg-gray-100 text-gray-500 border-gray-200{% endif %}
+  ">
+    {% for s in talk_statuses %}
+    <option value="{{ s }}" {% if s == current_status %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+</form>
+{% endmacro %}

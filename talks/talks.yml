@@ -1,0 +1,15 @@
+# Sample talks. All made up, just to populate the UI.
+- id: example-async
+  title: "Example Talk: Async Things"
+
+- id: example-observability
+  title: "Example Talk: Observability"
+
+- id: example-refactoring
+  title: "Example Talk: Refactoring"
+
+- id: example-testing
+  title: "Example Talk: Testing"
+
+- id: example-keynote
+  title: "Example Talk: A Sample Keynote"

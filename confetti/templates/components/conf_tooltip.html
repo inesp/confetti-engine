@@ -1,0 +1,108 @@
+{% from "components/difficulty.html" import difficulty_icon, favorite_star %}
+
+{% macro hover_popup(position="below", align="left", group_name="group", z="z-10") %}
+{#
+  Wrapper for hover popups. Shown on hover of the parent (trigger) element and
+  positioned by JS (see base.html) with `position: fixed`, so the popup always
+  stays inside the viewport instead of being clipped at a window edge.
+  `position` is used only as a hint for the preferred side (above/below);
+  the other args are accepted for backward compatibility and ignored.
+#}
+<div class="hover-popup hidden fixed z-50" data-prefer="{{ position }}" style="padding: 4px; max-height: calc(100vh - 12px); overflow-y: auto;">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro conf_tooltip(conf, conf_start=None, conf_end=None, today=None) %}
+{# Resolve CFP dates from next_event (includes presumed dates) #}
+{% set ne = conf.next_event %}
+{% set cfp_open = ne.cfp_open if ne else None %}
+{% set cfp_close = ne.cfp_close if ne else None %}
+{% set cfp_open_is_presumed = ne is not none and not ne.cfp_open_is_factual %}
+{% set cfp_close_is_presumed = ne is not none and not ne.cfp_close_is_factual %}
+{% set cfp_url = conf.cfp.url if conf.cfp and conf.cfp.url else None %}
+<div class="bg-white rounded-xl shadow-2xl border border-gray-200 w-[420px] p-5">
+  <div class="flex items-baseline justify-between gap-3 mb-3">
+    <a href="{{ conf.website }}" target="_blank" class="text-blue-500 hover:underline font-semibold">{{ favorite_star(conf) }}{{ conf.name }}</a>
+    <a href="{{ url_for('conferences.detail', conf_name=conf.name) }}" class="text-blue-500 hover:underline text-sm flex-shrink-0">Details &#9998;</a>
+  </div>
+  <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-sm">
+    <div class="text-gray-400">📍 Location</div>
+    <div class="text-gray-900">{{ conf.city }}, {{ conf.country }}</div>
+    <div class="text-gray-400">💰 Budget</div>
+    <div>
+      {% if conf.budget == 'full' %}<span class="text-green-600 font-medium">Full</span>
+      {% elif conf.budget == 'partial' %}<span class="text-yellow-600 font-medium">Partial</span>
+      {% elif conf.budget == 'ask' %}<span class="text-gray-500 font-medium">Ask</span>
+      {% elif conf.budget == 'none' %}<span class="text-red-600 font-medium">None</span>
+      {% else %}<span class="text-gray-400">Unknown</span>{% endif %}
+    </div>
+    {% if conf.difficulty in ('hard', 'longshot') %}
+    <div class="text-gray-400">🎯 Longshot</div>
+    <div class="flex items-center gap-1.5">
+      {{ difficulty_icon(conf.difficulty) }}
+      <span class="text-red-600 font-medium">{{ 'Big' if conf.difficulty == 'longshot' else 'Small' }} longshot</span>
+    </div>
+    {% endif %}
+    {% if conf.lang %}
+    <div class="text-gray-400">🗣️ Language</div>
+    <div class="text-gray-900">{{ conf.lang }}</div>
+    {% endif %}
+    {% if conf_start %}
+    <div class="text-gray-400">📅 Conference</div>
+    <div class="text-gray-900">{{ conf_start.strftime('%d. %b') }}{% if conf_end and conf_end != conf_start %} – {{ conf_end.strftime('%d. %b') }}{% endif %} {{ conf_start.year }}</div>
+    {% endif %}
+    {% if (cfp_open or cfp_close) and today %}
+    <div class="text-gray-400">📝 CFP</div>
+    <div>
+      {% if cfp_open %}{% if cfp_open_is_presumed %}<span class="font-bold">~</span>{% endif %}{{ cfp_open.strftime('%d. %b') }}{% endif %}
+      {% if cfp_close %} → {% if cfp_close_is_presumed %}<span class="font-bold">~</span>{% endif %}{{ cfp_close.strftime('%d. %b') }}{% endif %}
+      {% if cfp_close %}
+        {% set days_left = (cfp_close - today).days %}
+        {% if days_left > 0 %}
+          <span class="ml-1 {% if days_left <= 7 %}text-red-600 font-bold{% elif days_left <= 30 %}text-orange-600 font-medium{% else %}text-gray-500{% endif %}">({{ days_left }}d left)</span>
+        {% elif days_left == 0 %}
+          <span class="ml-1 text-red-600 font-bold">(closes today!)</span>
+        {% else %}
+          <span class="ml-1 text-gray-400">(closed)</span>
+        {% endif %}
+      {% endif %}
+      {% if cfp_url %}
+        <a href="{{ cfp_url }}" target="_blank" class="ml-2 text-blue-500 hover:underline">Submit &rarr;</a>
+      {% endif %}
+    </div>
+    {% elif cfp_url %}
+    <div class="text-gray-400">📝 CFP</div>
+    <div><a href="{{ cfp_url }}" target="_blank" class="text-blue-500 hover:underline">CFP page &rarr;</a></div>
+    {% endif %}
+    {% if ne and ne.notify %}
+    <div class="text-gray-400">📨 Hear back</div>
+    <div class="text-gray-700">{{ ne.notify }}</div>
+    {% endif %}
+    {% if conf.history %}
+    <div class="text-gray-400">📋 Applied</div>
+    <div class="text-gray-900">{{ conf.history.applied | join(', ') }}</div>
+    {% if conf.history.accepted %}
+    <div class="text-gray-400">✅ Accepted</div>
+    <div class="text-green-600">{{ conf.history.accepted | join(', ') }}</div>
+    {% endif %}
+    {% if conf.history.notes %}
+    <div class="text-gray-400">⚠️ Other</div>
+    <div class="text-gray-500">{{ conf.history.notes | join(', ') }}</div>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% if conf.topic_fit %}
+  <div class="mt-3 pt-3 border-t border-gray-100">
+    <p class="text-gray-400 text-sm mb-1">Topic fit</p>
+    <p class="text-sm text-gray-700">{{ conf.topic_fit }}</p>
+  </div>
+  {% endif %}
+  {% if conf.notes %}
+  <div class="mt-3 pt-3 border-t border-gray-100">
+    <p class="text-gray-400 text-sm mb-1">Notes</p>
+    <p class="text-sm text-gray-600">{{ conf.notes }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

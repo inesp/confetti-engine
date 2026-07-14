@@ -1,0 +1,34 @@
+# budget: none, difficulty: longshot, talk rejected.
+- name: "Rivertown Code Gathering"
+  city: "Rivertown"
+  country: "Ireland"
+  website: "https://example.com/rivertown-gathering"
+
+  cfp:
+    url: "https://sessionize.com/rivertown-gathering"
+    site: "sessionize"
+    formats: "40min, workshop 2h"
+    notes: ""
+    presumed_open: "05-01"
+    presumed_close: "06-15"
+
+  budget: none
+  difficulty: longshot
+  topic_fit: "example-refactoring"
+  notes: "Community event, no speaker budget. Fun crowd though."
+
+  presumed:
+    conference_start: "10-05"
+    conference_end: "10-05"
+
+  years:
+    2026:
+      cfp_open: 2026-05-01
+      cfp_close: 2026-06-15
+      notify: "Decisions by 1 Aug"
+      conference_start: 2026-10-05
+      conference_end: 2026-10-05
+      talks:
+        - talk: example-refactoring
+          status: rejected
+          title: "Example Talk: Refactoring"

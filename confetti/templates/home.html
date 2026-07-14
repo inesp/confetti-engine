@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Conference Files -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="flex items-center mb-4">
+    {% set files_ok = conferences and not validation_errors %}
+    <div class="w-3 h-3 {{ 'bg-green-500' if files_ok else 'bg-red-500' if validation_errors else 'bg-yellow-500' }} rounded-full mr-3"></div>
+    <h3 class="text-lg font-semibold text-gray-900">Conference Files</h3>
+    <div class="ml-auto flex gap-2">
+      <span class="{{ 'bg-green-100 text-green-800' if files_ok else 'bg-red-100 text-red-800' if validation_errors else 'bg-yellow-100 text-yellow-800' }} font-medium px-2 py-1 rounded">
+        {{ conferences|length }} confs
+      </span>
+      <span class="bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded">
+        {{ talks|length }} talks
+      </span>
+      <span class="bg-purple-100 text-purple-800 font-medium px-2 py-1 rounded">
+        {{ talk_descriptions|length }} talk descriptions
+      </span>
+    </div>
+  </div>
+
+  {% if not conferences and not validation_errors %}
+    <p class="text-sm text-gray-500">No conference files found in <code class="bg-gray-100 px-1 rounded">conferences/</code>.</p>
+  {% endif %}
+</div>
+
+<!-- Validation Errors -->
+{% if validation_errors %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="flex items-center mb-4">
+    <h3 class="text-lg font-semibold text-gray-900">YAML problems</h3>
+  </div>
+
+  <div class="space-y-3">
+    {% for error in validation_errors %}
+      <div class="{{ 'bg-yellow-50 border border-yellow-200' if error.level == 'warning' else 'bg-red-50 border border-red-200' }} rounded p-3">
+        <p class="text-sm font-medium {{ 'text-yellow-800' if error.level == 'warning' else 'text-red-800' }}">{{ error.file }} — {{ error.conference }}</p>
+        <ul class="text-sm {{ 'text-yellow-700' if error.level == 'warning' else 'text-red-700' }} mt-1 ml-4 list-disc">
+          {% for problem in error.errors %}
+            <li><pre class="whitespace-pre-wrap font-mono text-sm">{{ problem }}</pre></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if owed %}
+<div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-amber-900">Money owed to you</h3>
+    <span class="text-2xl font-bold text-amber-900">€{{ "%.0f"|format(owed_total) }}</span>
+  </div>
+  <div class="space-y-2">
+    {% for item in owed %}
+      <div class="flex items-center justify-between bg-white border border-amber-200 rounded px-4 py-3">
+        <div class="text-gray-900 font-medium">{{ item.name }} <span class="text-gray-500">{{ item.year }}</span></div>
+        <span class="font-bold text-amber-900">€{{ "%.0f"|format(item.amount) }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Google Calendar -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <div class="flex items-center mb-4">
+    {% if calendar_status.is_authenticated and selected_calendar_id %}
+      <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+    {% elif calendar_status.is_authenticated or calendar_status.needs_auth %}
+      <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+    {% else %}
+      <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+    {% endif %}
+    <h3 class="text-lg font-semibold text-gray-900">Google Calendar</h3>
+    {% if calendar_status.is_authenticated and selected_calendar_id %}
+      <span class="ml-auto bg-green-100 text-green-800 font-medium px-2 py-1 rounded">{{ calendar_status.message }}</span>
+    {% elif calendar_status.is_authenticated %}
+      <span class="ml-auto bg-yellow-100 text-yellow-800 font-medium px-2 py-1 rounded">No calendar selected</span>
+    {% elif calendar_status.needs_auth %}
+      <span class="ml-auto bg-yellow-100 text-yellow-800 font-medium px-2 py-1 rounded">{{ calendar_status.message }}</span>
+    {% else %}
+      <span class="ml-auto bg-red-100 text-red-800 font-medium px-2 py-1 rounded">{{ calendar_status.message }}</span>
+    {% endif %}
+  </div>
+
+  {% if token_error %}
+    <div class="bg-red-50 border border-red-200 rounded p-3 text-red-700">
+      Google token expired or revoked. Delete <code class="bg-red-100 px-1 rounded">{{ token_error_file }}</code> and re-authenticate.
+    </div>
+  {% elif calendar_status.missing_credentials %}
+    <p class="text-gray-600">Place your <code class="bg-gray-100 px-1 rounded">credentials.json</code> file in the project root to get started.</p>
+  {% elif calendar_status.needs_auth %}
+    <a href="{{ url_for('calendar.start_auth') }}"
+       class="inline-block bg-blue-600 text-white font-medium px-4 py-2 rounded hover:bg-blue-700">
+      Connect Google Calendar
+    </a>
+  {% elif calendar_status.is_authenticated and calendars %}
+    <div class="flex items-center gap-4">
+      <form method="POST" action="{{ url_for('calendar.select_calendar') }}" class="flex items-center gap-4">
+        <label for="calendar_id" class="text-gray-700 font-medium whitespace-nowrap">Sync to:</label>
+        <select name="calendar_id" id="calendar_id" class="border border-gray-300 rounded px-3 py-2 bg-white text-gray-900">
+          {% set calendar_ids = calendars | map(attribute='calendar_id') | list %}
+          <option value="" {% if selected_calendar_id not in calendar_ids %}selected{% endif %} disabled>-- pick a calendar --</option>
+          {% for cal in calendars %}
+            <option value="{{ cal.calendar_id }}" {% if cal.calendar_id == selected_calendar_id %}selected{% endif %}>{{ cal.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white font-medium px-4 py-2 rounded hover:bg-blue-700">Save</button>
+      </form>
+      {% if selected_calendar_id %}
+        <form method="POST" action="{{ url_for('calendar.sync') }}" class="flex items-center gap-4">
+          <button type="submit" class="bg-green-600 text-white font-medium px-4 py-2 rounded hover:bg-green-700">Sync now</button>
+          <span class="text-gray-600">Creates, updates, or deletes all-day events for accepted conferences.</span>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if sync_result %}
+    <div class="mt-4 space-y-2">
+      {% if sync_result.created %}
+        <div class="bg-green-50 border border-green-200 rounded p-3">
+          <span class="font-medium text-green-800">Created ({{ sync_result.created|length }}):</span>
+          <span class="text-green-700">{{ sync_result.created|join(', ') }}</span>
+        </div>
+      {% endif %}
+      {% if sync_result.updated %}
+        <div class="bg-blue-50 border border-blue-200 rounded p-3">
+          <span class="font-medium text-blue-800">Updated ({{ sync_result.updated|length }}):</span>
+          <span class="text-blue-700">{{ sync_result.updated|join(', ') }}</span>
+        </div>
+      {% endif %}
+      {% if sync_result.deleted %}
+        <div class="bg-orange-50 border border-orange-200 rounded p-3">
+          <span class="font-medium text-orange-800">Deleted ({{ sync_result.deleted|length }}):</span>
+          <span class="text-orange-700">{{ sync_result.deleted|join(', ') }}</span>
+        </div>
+      {% endif %}
+      {% if sync_result.errors %}
+        {% for error in sync_result.errors %}
+          <div class="bg-red-50 border border-red-200 rounded p-3 text-red-700">{{ error }}</div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% endif %}
+  <p class="text-gray-400 mt-4">To re-authenticate, delete <code class="bg-gray-100 px-1 rounded">google_token.json</code> from the project root and reload this page.</p>
+</div>
+{% endblock %}

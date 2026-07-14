@@ -1,0 +1,32 @@
+# skip: true (hidden from the active pipeline), talk sidelined.
+- name: "Backwater Bytes"
+  city: "Tallinn"
+  country: "Estonia"
+  website: "https://example.com/backwater-bytes"
+
+  cfp:
+    url: "https://example.com/backwater-bytes/cfp"
+    site: "own"
+    formats: "20min"
+    notes: ""
+    presumed_open: "04-01"
+    presumed_close: "05-15"
+
+  budget: none
+  difficulty: longshot
+  topic_fit: "example-keynote"
+  notes: "Skipped for now: too small, no budget, clashes with other travel."
+  skip: true
+
+  presumed:
+    conference_start: "08-20"
+    conference_end: "08-20"
+
+  years:
+    2026:
+      cfp_open: 2026-04-01
+      cfp_close: 2026-05-15
+      talks:
+        - talk: example-keynote
+          status: sidelined
+          title: "Example Talk: A Sample Keynote"

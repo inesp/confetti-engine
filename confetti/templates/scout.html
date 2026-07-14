@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
+{% from "components/conf_meta.html" import conf_meta %}
+{% from "components/conf_name.html" import conf_name %}
+
+{% block content %}
+<!-- Scout Control -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-gray-900">In need of research:</h3>
+    <form method="POST" action="/scout/start">
+      <button id="scout-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+        Scout now
+      </button>
+    </form>
+  </div>
+  {% if to_scout %}
+  <div class="space-y-3">
+    {% for conf in to_scout %}
+    {% set ne = conf.next_event %}
+    {% set ye = conf.years.get(current_year) if conf.years else None %}
+    <div class="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+      <div class="flex items-baseline gap-2">
+        <span class="text-gray-400 tabular-nums">{{ loop.index }}.</span>
+        <span class="relative group">
+          {{ conf_name(conf) }}
+          {% call hover_popup() %}
+            {{ conf_tooltip(conf, ne.conference_start, ne.conference_end, today) }}
+          {% endcall %}
+        </span>
+        <span class="text-gray-400 text-sm">{{ conf.filename or '' }}</span>
+      </div>
+      {{ conf_meta(conf, conf_start=ne.conference_start, conf_end=ne.conference_end, cfp_open=ne.cfp_open, cfp_close=ne.cfp_close, cfp_url=conf.cfp.url if conf.cfp else None, conf_start_is_factual=ne.conference_start_is_factual, cfp_open_is_factual=ne.cfp_open_is_factual, show_missing=true) }}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-gray-400">Nothing to scout right now.</p>
+  {% endif %}
+</div>
+
+<!-- Progress + Log -->
+<div id="log-section" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hidden">
+  <div id="progress" class="flex items-center justify-between mb-4 hidden">
+    <div class="flex items-center">
+      <div class="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-3"></div>
+      <span id="progress-text" class="text-gray-600">Scouting...</span>
+    </div>
+    <form method="POST" action="/scout/stop">
+      <button type="submit" id="stop-btn" class="text-red-600 hover:text-red-800 font-medium">Stop</button>
+    </form>
+  </div>
+  <div id="log-tabs" class="flex gap-4 mb-3 hidden">
+    <button type="button" id="log-tab-current" class="font-medium text-blue-700 border-b-2 border-blue-700 pb-1">This run</button>
+    <button type="button" id="log-tab-prev" class="font-medium text-gray-500 hover:text-gray-700 pb-1 hidden">Previous run</button>
+  </div>
+  <pre id="log-output" class="bg-gray-900 text-green-400 text-sm rounded-lg p-4 max-h-96 overflow-y-auto font-mono leading-relaxed"></pre>
+</div>
+
+<!-- Results -->
+<div id="results-section" class="hidden">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Results</h3>
+    <div id="results-list" class="space-y-3"></div>
+  </div>
+</div>
+
+<!-- Skipped -->
+{% if skipped %}
+<div id="skipped-section" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <h3 class="text-sm font-semibold text-gray-500 mb-3">Skipped</h3>
+  <div id="skipped-list" class="space-y-3">
+    {% for s in skipped %}
+    <div class="border-b border-gray-100 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+      <div class="flex items-baseline justify-between">
+        <div class="flex items-baseline gap-2">
+          <span class="text-gray-400 tabular-nums">{{ loop.index }}.</span>
+          <span class="relative group">
+            {{ conf_name(s.conf) }}
+            {% call hover_popup() %}
+              {{ conf_tooltip(s.conf, s.conf.next_event.conference_start, s.conf.next_event.conference_end, today) }}
+            {% endcall %}
+          </span>
+          <span class="text-gray-400 text-sm">{{ s.conf.filename or '' }}</span>
+        </div>
+        <span class="font-semibold text-gray-900 text-right">{{ s.outcome }}</span>
+      </div>
+      {% set sne = s.conf.next_event %}
+      {{ conf_meta(s.conf, conf_start=sne.conference_start, conf_end=sne.conference_end, cfp_open=sne.cfp_open, cfp_close=sne.cfp_close, cfp_url=s.conf.cfp.url if s.conf.cfp else None, conf_start_is_factual=sne.conference_start_is_factual, cfp_open_is_factual=sne.cfp_open_is_factual) }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let polling = false;
+
+  function renderConf(item, showRaw = false) {
+    const c = item.conf;
+    const cfp = c.cfp || {};
+    const presumed = c.presumed || {};
+
+    // Find the latest year entry with actual dates
+    const yearKeys = Object.keys(c.years || {}).sort();
+    const latestYear = yearKeys.length ? c.years[yearKeys[yearKeys.length - 1]] : null;
+
+    // Prefer actual dates, fall back to presumed with ~ prefix
+    const confStart = latestYear && latestYear.conference_start
+      ? latestYear.conference_start
+      : presumed.conference_start ? '~' + presumed.conference_start : null;
+    const confEnd = latestYear && latestYear.conference_end
+      ? latestYear.conference_end
+      : presumed.conference_end ? '~' + presumed.conference_end : null;
+    const cfpOpen = latestYear && latestYear.cfp_open
+      ? latestYear.cfp_open
+      : cfp.presumed_open ? '~' + cfp.presumed_open : null;
+    const cfpClose = latestYear && latestYear.cfp_close
+      ? latestYear.cfp_close
+      : cfp.presumed_close ? '~' + cfp.presumed_close : null;
+
+    const rawHtml = (showRaw && item.raw_response)
+      ? `<div class="mt-2"><p class="text-xs font-semibold text-gray-400 uppercase mb-1">Raw response</p><pre class="text-xs text-gray-500 whitespace-pre-wrap bg-gray-50 rounded p-2">${item.raw_response}</pre></div>`
+      : '';
+
+    return `<div class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0">
+      <div class="flex items-center gap-2">
+        <p class="text-base font-semibold text-gray-900">${c.name}</p>
+        ${c.website ? `<a href="${c.website}" target="_blank" class="text-blue-500 text-sm hover:underline">${c.website}</a>` : ''}
+        <span class="text-gray-400 text-sm">${c.filename || ''}</span>
+      </div>
+      <p class="mt-2">${item.outcome}</p>
+      <div class="mt-3 text-sm text-gray-600 space-y-1">
+        <p>
+          ${c.city ? `<span class="text-gray-400">&#x1F4CD;</span> ${c.city}, ${c.country}` : ''}
+          ${confStart ? ` <span class="text-gray-400 ml-2">&#x1F4C5;</span> ${confStart}${confEnd && confEnd !== confStart ? ' &rarr; ' + confEnd : ''}` : ''}
+          ${cfpOpen || cfpClose ? ` <span class="text-gray-400 ml-2">&#x1F4DD;</span> CFP: ${cfpOpen || '?'} &rarr; ${cfpClose || '?'}${cfp.site ? ` (${cfp.site})` : ''}` : ''}
+        </p>
+        ${cfp.url ? `<p><span class="text-gray-400">&#x1F517;</span> <a href="${cfp.url}" target="_blank" class="text-blue-500 hover:underline">${cfp.url}</a></p>` : ''}
+      </div>
+      ${rawHtml}
+    </div>`;
+  }
+
+  let logWhich = 'current';
+
+  function selectLog(which) {
+    logWhich = which;
+    const active = 'font-medium text-blue-700 border-b-2 border-blue-700 pb-1';
+    const idle = 'font-medium text-gray-500 hover:text-gray-700 pb-1';
+    document.getElementById('log-tab-current').className = which === 'current' ? active : idle;
+    document.getElementById('log-tab-prev').className = (which === 'prev' ? active : idle);
+    fetchLog();
+  }
+
+  function fetchLog() {
+    fetch('/scout/log' + (logWhich === 'prev' ? '?prev=1' : ''))
+      .then(r => r.json())
+      .then(data => {
+        if (data.has_prev) {
+          document.getElementById('log-tab-prev').classList.remove('hidden');
+        }
+        if (data.lines.length > 0 || data.has_prev) {
+          document.getElementById('log-section').classList.remove('hidden');
+          document.getElementById('log-tabs').classList.remove('hidden');
+        }
+        const logOutput = document.getElementById('log-output');
+        logOutput.textContent = data.lines.join('\n');
+        logOutput.scrollTop = logOutput.scrollHeight;
+      })
+      .catch(() => {});
+  }
+
+  document.getElementById('log-tab-current').addEventListener('click', () => selectLog('current'));
+  document.getElementById('log-tab-prev').addEventListener('click', () => selectLog('prev'));
+
+  function startPolling() {
+    polling = true;
+    document.getElementById('scout-btn').disabled = true;
+    document.getElementById('scout-btn').textContent = 'Running...';
+    document.getElementById('progress').classList.remove('hidden');
+    selectLog('current');
+    poll();
+  }
+
+  function poll() {
+    if (!polling) return;
+
+    fetch('/scout/status')
+      .then(r => r.json())
+      .then(data => {
+        // Update progress
+        if (data.total > 0) {
+          document.getElementById('progress-text').textContent =
+            `Scouting... ${data.targets.join(', ')}`;
+        }
+
+        // Update results
+        if (data.results.length > 0) {
+          document.getElementById('results-section').classList.remove('hidden');
+          const list = document.getElementById('results-list');
+          list.innerHTML = data.results.map(r => renderConf(r, true)).join('');
+        }
+
+        // Continue or stop
+        if (data.status === 'done' || data.status === 'stopped' || data.status === 'error') {
+          polling = false;
+          document.getElementById('progress').classList.add('hidden');
+          document.getElementById('scout-btn').disabled = false;
+          document.getElementById('scout-btn').textContent = 'Scout now';
+
+          if (data.status === 'error') {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-list').innerHTML =
+              `<p class="text-red-600">Scouting failed: ${data.error || 'unknown error'}</p>`;
+          } else if (data.total === 0) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-list').innerHTML =
+              `<p class="text-gray-500">Nothing to scout.</p>`;
+          } else if (data.status === 'stopped' && data.results.length === 0) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-list').innerHTML =
+              `<p class="text-gray-500">Stopped. Was scouting: ${data.targets.join(', ')}</p>`;
+          }
+          fetchLog();  // final update
+        } else {
+          fetchLog();
+          setTimeout(poll, 2000);
+        }
+      })
+      .catch(() => setTimeout(poll, 2000));
+  }
+
+  // Check if already running on page load
+  fetch('/scout/status')
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'running') {
+        startPolling();
+      } else {
+        if (data.status === 'error' || ((data.status === 'done' || data.status === 'stopped') && data.results.length > 0)) {
+          polling = true;
+          poll();
+        }
+        fetchLog();
+      }
+    });
+
+  // Intercept form submit to start polling
+  document.querySelector('form').addEventListener('submit', () => {
+    setTimeout(startPolling, 500);
+  });
+</script>
+{% endblock %}

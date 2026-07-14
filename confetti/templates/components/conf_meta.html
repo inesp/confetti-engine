@@ -1,0 +1,8 @@
+{% macro conf_meta(conf, conf_start=None, conf_end=None, cfp_open=None, cfp_close=None, cfp_url=None, conf_start_is_factual=true, cfp_open_is_factual=true, show_missing=false) %}
+<div class="text-gray-500">
+  {% if conf.city %}📍 {{ conf.city }}, {{ conf.country }}{% endif %}
+  {% if conf_start %} 📅 {% if not conf_start_is_factual %}<span class="font-bold">~</span>{% endif %}{{ conf_start.strftime('%d. %b %Y') }}{% if conf_end and conf_end != conf_start %} ({{ (conf_end - conf_start).days + 1 }}d){% endif %}{% elif show_missing %} <span class="text-amber-600">📅 conference dates missing</span>{% endif %}
+  {% if cfp_open %} 📝 CFP: {% if not cfp_open_is_factual %}<span class="font-bold">~</span>{% endif %}{{ cfp_open.strftime('%d. %b %Y') }}{% if cfp_close %} → {{ cfp_close.strftime('%d. %b %Y') }}{% endif %}{% elif show_missing %} <span class="text-amber-600">📝 CFP dates missing</span>{% endif %}
+  {% if cfp_url %} <a href="{{ cfp_url }}" target="_blank" class="text-blue-500 hover:underline">🔗</a>{% endif %}
+</div>
+{% endmacro %}

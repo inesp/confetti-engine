@@ -1,0 +1,24 @@
+<!-- Navigation -->
+<nav class="mb-6">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="/" class="text-gray-900 font-medium">Home</a>
+        {% if has_validation_errors %}<a href="/" title="YAML validation errors found">⚠️</a>{% endif %}
+      </div>
+      <div class="flex items-center space-x-6">
+        <a href="/conferences" class="text-gray-600 hover:text-gray-900 text-sm">Conferences</a>
+        <a href="/past" class="text-gray-600 hover:text-gray-900 text-sm">Past</a>
+        <a href="/scout" class="text-gray-600 hover:text-gray-900 text-sm">Scout</a>
+        <a href="/discover" class="text-gray-600 hover:text-gray-900 text-sm">Discover</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+{% if show_header_title != False %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ title }}</h1>
+  <p class="text-gray-600">{{ subtitle }}</p>
+</div>
+{% endif %}

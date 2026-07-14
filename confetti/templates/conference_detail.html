@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% from "components/difficulty.html" import difficulty_icon %}
+{% from "components/talk_status_select.html" import talk_status_select %}
+{% from "components/cost_form.html" import cost_form %}
+
+{% block content %}
+<div class="mb-4 flex items-center justify-between">
+  <a href="{{ url_for('conferences.index') }}" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <div class="flex items-center gap-2">
+    {% if prev_conf %}
+    <a href="{{ url_for('conferences.detail', conf_name=prev_conf) }}" class="px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100" title="{{ prev_conf }}">&larr;</a>
+    {% else %}
+    <span class="px-2 py-1 rounded border border-gray-200 text-gray-300">&larr;</span>
+    {% endif %}
+    <select onchange="if(this.value) window.location.href=this.value" class="px-2 py-1 rounded border border-gray-300 text-gray-700 cursor-pointer">
+      {% for name in all_confs %}
+      <option value="{{ url_for('conferences.detail', conf_name=name) }}" {% if name == conf.name %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+    {% if next_conf %}
+    <a href="{{ url_for('conferences.detail', conf_name=next_conf) }}" class="px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100" title="{{ next_conf }}">&rarr;</a>
+    {% else %}
+    <span class="px-2 py-1 rounded border border-gray-200 text-gray-300">&rarr;</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Header -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="flex items-center gap-3 mb-1">
+    <h2 class="text-2xl font-bold text-gray-900">{{ conf.name }}</h2>
+    <form method="POST" action="{{ url_for('conferences.update_favorite_route', conf_name=conf.name) }}">
+      <input type="hidden" name="favorite" value="{{ 'false' if conf.favorite else 'true' }}">
+      <button type="submit" title="{{ 'Remove from favorites' if conf.favorite else 'Mark as favorite' }}"
+        class="{{ 'text-[#FFDD00] hover:text-[#e6c700]' if conf.favorite else 'text-gray-300 hover:text-[#FFDD00]' }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="{{ 'currentColor' if conf.favorite else 'none' }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </button>
+    </form>
+    {{ difficulty_icon(conf.difficulty, 20) }}
+    {% if conf.skip %}
+    <span class="bg-gray-200 text-gray-600 font-semibold px-2 py-0.5 rounded">Skipped forever</span>
+    {% elif year_entry and year_entry.skip %}
+    <span class="bg-gray-200 text-gray-600 font-semibold px-2 py-0.5 rounded">Skipped {{ year }}</span>
+    {% endif %}
+    {% set year_skipped = year_entry.skip if year_entry else false %}
+    <div class="ml-auto flex items-center gap-2">
+      <form method="POST" action="{{ url_for('conferences.update_year_skip_route', conf_name=conf.name) }}">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="skip" value="{{ 'false' if year_skipped else 'true' }}">
+        {% if year_skipped %}
+        <button type="submit" class="flex items-center gap-1.5 border border-green-300 text-green-700 hover:text-green-800 rounded px-2 py-1 hover:bg-green-50" title="Bring {{ year }} back">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"/>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+          Un-skip {{ year }}
+        </button>
+        {% else %}
+        <button type="submit" class="border border-amber-200 text-amber-500 hover:text-amber-700 rounded px-2 py-1 hover:bg-amber-50" title="Skip only the {{ year }} edition">⊘ Skip {{ year }}</button>
+        {% endif %}
+      </form>
+      <form method="POST" action="{{ url_for('conferences.update_skip_route', conf_name=conf.name) }}">
+        <input type="hidden" name="skip" value="{{ 'false' if conf.skip else 'true' }}">
+        {% if conf.skip %}
+        <button type="submit" class="flex items-center gap-1.5 border border-green-300 text-green-700 hover:text-green-800 rounded px-2 py-1 hover:bg-green-50" title="Bring this conference back">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"/>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+          Un-skip
+        </button>
+        {% else %}
+        <button type="submit" class="border border-red-200 text-red-400 hover:text-red-600 rounded px-2 py-1 hover:bg-red-50" title="Skip this conference">⊘ Skip forever</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  <div class="text-gray-500">
+    {{ conf.city }}, {{ conf.country }}
+    {% if conf.website %} · <a href="{{ conf.website }}" target="_blank" class="text-blue-600 hover:underline">{{ conf.website }}</a>{% endif %}
+  </div>
+  {% if conf.address %}
+  <div class="mt-1">
+    <a href="https://www.google.com/maps/search/{{ conf.address | urlencode }}" target="_blank" class="text-gray-400 hover:text-blue-600">🗺️ {{ conf.address }}</a>
+  </div>
+  {% endif %}
+  {% if year_entry %}
+  <div class="mt-3 flex gap-6 text-gray-600">
+    {% if year_entry.conference_start %}
+    <span>{{ year_entry.conference_start.strftime('%d %b %Y') }}{% if year_entry.conference_end %} - {{ year_entry.conference_end.strftime('%d %b %Y') }}{% endif %}</span>
+    {% endif %}
+    {% if year_entry.cfp_open or year_entry.cfp_close %}
+    {% set cfp_days_left = (year_entry.cfp_close - today).days if year_entry.cfp_close else none %}
+    <span>CFP: {{ year_entry.cfp_open.strftime('%d %b') if year_entry.cfp_open else '?' }} - {{ year_entry.cfp_close.strftime('%d %b') if year_entry.cfp_close else '?' }}</span>
+    {% if cfp_days_left is not none and cfp_days_left >= 0 %}
+    <span class="bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded">{% if cfp_days_left == 0 %}last day of CFP{% else %}{{ cfp_days_left }} day{{ 's' if cfp_days_left != 1 }} left of CFP{% endif %}</span>
+    {% elif year_entry.conference_start and year_entry.conference_start >= today %}
+    {% set conf_days_left = (year_entry.conference_start - today).days %}
+    <span class="bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded">{{ conf_days_left }} day{{ 's' if conf_days_left != 1 }} till conference</span>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+  {% set ne = conf.next_event %}
+  <form method="POST" action="{{ url_for('conferences.update_cfp_window_route', conf_name=conf.name) }}" class="mt-2 flex items-center gap-2 text-gray-600">
+    <input type="hidden" name="year" value="{{ year }}">
+    <label>CFP window ({{ year }})</label>
+    <input type="date" name="cfp_open" value="{{ year_entry.cfp_open.isoformat() if year_entry and year_entry.cfp_open else '' }}"
+      class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <span class="text-gray-400">→</span>
+    <input type="date" name="cfp_close" value="{{ year_entry.cfp_close.isoformat() if year_entry and year_entry.cfp_close else '' }}"
+      class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
+    {% if (not year_entry or (not year_entry.cfp_open and not year_entry.cfp_close)) and ne.cfp_open %}
+    <span class="text-gray-400">presumed ~{{ ne.cfp_open.strftime('%d %b') }}{% if ne.cfp_close %} → ~{{ ne.cfp_close.strftime('%d %b') }}{% endif %}</span>
+    {% endif %}
+  </form>
+  {% set notify = (year_entry.notify if year_entry and year_entry.notify else ne.notify) %}
+  {% if notify %}
+  <div class="mt-2 text-gray-600">📨 Notify: {{ notify }}</div>
+  {% endif %}
+  <form method="POST" action="{{ url_for('conferences.update_cfp_url_route', conf_name=conf.name) }}" class="mt-2 flex items-center gap-2 text-gray-600">
+    <label>CFP link</label>
+    <input type="url" name="cfp_url" placeholder="https://..." value="{{ conf.cfp.url if conf.cfp and conf.cfp.url else '' }}"
+      class="flex-grow max-w-md px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
+  </form>
+  <form method="POST" action="{{ url_for('conferences.update_difficulty_route', conf_name=conf.name) }}" class="mt-2 flex items-center gap-4 text-gray-600">
+    <label>Longshot</label>
+    <label class="flex items-center gap-1.5 cursor-pointer">
+      <input type="radio" name="difficulty" value="" onchange="this.form.submit()" {% if conf.difficulty not in ('hard', 'longshot') %}checked{% endif %}>
+      Not a longshot
+    </label>
+    <label class="flex items-center gap-1.5 cursor-pointer">
+      <input type="radio" name="difficulty" value="hard" onchange="this.form.submit()" {% if conf.difficulty == 'hard' %}checked{% endif %}>
+      Small longshot
+    </label>
+    <label class="flex items-center gap-1.5 cursor-pointer">
+      <input type="radio" name="difficulty" value="longshot" onchange="this.form.submit()" {% if conf.difficulty == 'longshot' %}checked{% endif %}>
+      Big longshot
+    </label>
+  </form>
+</div>
+
+<!-- Talks -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Talks {{ year }}</h3>
+  <div class="space-y-4">
+    {% for talk in (year_entry.talks if year_entry else []) %}
+    <div class="border border-gray-100 rounded-lg p-4">
+      <div class="flex items-center justify-between gap-3">
+        <form method="POST" action="{{ url_for('conferences.update_talk_title_route', conf_name=conf.name) }}" class="flex items-center gap-2 flex-grow">
+          <input type="hidden" name="year" value="{{ year }}">
+          <input type="hidden" name="talk_id" value="{{ talk.talk }}">
+          <input type="text" name="title" value="{{ talk.title }}" placeholder="Title for this submission"
+            class="flex-grow px-2 py-1 border border-gray-300 rounded text-gray-900 font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+          <span class="text-gray-400 flex-shrink-0">({{ talk.talk }})</span>
+          <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
+        </form>
+        {{ talk_status_select(conf.name, talk.talk, year, talk.status, talk_statuses, 'detail') }}
+      </div>
+      {% if talk.status == 'accepted' %}
+      <form method="POST" action="{{ url_for('conferences.update_talk_time_route', conf_name=conf.name) }}" class="flex items-center gap-2 mt-2">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="talk_id" value="{{ talk.talk }}">
+        <label class="text-gray-500">Schedule</label>
+        <input type="date" name="talk_date" value="{{ talk.talk_start.strftime('%Y-%m-%d') if talk.talk_start else '' }}"
+          class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+        <input type="text" name="talk_time" value="{{ talk.talk_start.strftime('%H:%M') if talk.talk_start else '' }}" placeholder="HH:MM" pattern="\d{1,2}:\d{2}" size="5"
+          class="w-16 px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+        <input type="number" name="talk_duration" value="{{ talk.talk_duration or '' }}" min="0" max="90" placeholder="min"
+          class="w-14 px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+        <span class="text-gray-400">min</span>
+        <input type="text" name="schedule_notes" value="{{ talk.schedule_notes }}" placeholder="room, notes..."
+          class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+        <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
+        {% if talk.talk_start and talk.talk_duration %}
+        <span class="text-gray-400">ends {{ talk.talk_end.strftime('%H:%M') }}</span>
+        {% endif %}
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <form method="POST" action="{{ url_for('conferences.add_talk_route', conf_name=conf.name) }}" class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+    <input type="hidden" name="year" value="{{ year }}">
+    <select name="talk_id" required
+      class="px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 cursor-pointer focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+      <option value="" disabled selected>Pick a talk...</option>
+      {% for t in all_talks %}
+      <option value="{{ t.id }}">{{ t.id }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="title" placeholder="Title for this submission"
+      class="flex-grow px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Add talk</button>
+  </form>
+</div>
+
+{% if year_entry and year_entry.status not in ('rejected', 'withdrawn') %}
+<!-- Resources -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Resources</h3>
+
+  <!-- Vacation days -->
+  <form method="POST" action="{{ url_for('conferences.update_vacation_days_route', conf_name=conf.name) }}" class="flex items-center gap-2 mb-5">
+    <input type="hidden" name="year" value="{{ year }}">
+    <label class="text-gray-600">Vacation</label>
+    <input type="number" name="vacation_days" value="{{ year_entry.vacation_days }}" min="0" max="30"
+      class="w-20 px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
+  </form>
+
+  <!-- Cost -->
+  {{ cost_form(year_entry.cost, year, conf.name) }}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="space-y-1 text-gray-700">
+    <p class="font-medium">{{ year }} edition</p>
+    {% if year_entry %}
+    {% if year_entry.status in ('rejected', 'withdrawn') %}
+    <p>{{ year_entry.status | capitalize }}.</p>
+    {% endif %}
+    {% if year_entry.cfp_open and year_entry.cfp_close and year_entry.cfp_open <= today and today <= year_entry.cfp_close %}
+    {% set cfp_left = (year_entry.cfp_close - today).days %}
+    <p class="bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded inline-block">CFP open, {{ cfp_left }} day{{ 's' if cfp_left != 1 }} left</p>
+    {% elif year_entry.cfp_open and year_entry.cfp_open > today %}
+    {% set cfp_in = (year_entry.cfp_open - today).days %}
+    <p>CFP opens in {{ cfp_in }} day{{ 's' if cfp_in != 1 }}.</p>
+    {% elif year_entry.cfp_close and year_entry.cfp_close < today and not year_entry.talks %}
+    <p>CFP closed, didn't apply.</p>
+    {% endif %}
+    {% if year_entry.conference_start and year_entry.conference_start >= today %}
+    {% set conf_in = (year_entry.conference_start - today).days %}
+    <p>Conference in {{ conf_in }} day{{ 's' if conf_in != 1 }}.</p>
+    {% elif year_entry.conference_start and year_entry.conference_start < today %}
+    <p>Conference passed.</p>
+    {% endif %}
+    {% else %}
+    <p>No dates known for {{ year }}.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Past talks -->
+{% set other_years = conf.years.items() | selectattr('0', 'ne', year) | list | sort(attribute='0', reverse=true) %}
+{% set has_other_talks = other_years | selectattr('1') | selectattr('1.talks') | list %}
+{% if has_other_talks %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-3">Previous years</h3>
+  {% for other_year, other_entry in other_years if other_entry and other_entry.talks %}
+  <div class="{% if not loop.first %}mt-3 pt-3 border-t border-gray-100{% endif %}">
+    <div class="flex items-center gap-3">
+      <span class="font-medium text-gray-700">{{ other_year }}</span>
+      {% if other_entry.conference_start %}
+      <span class="text-gray-400">{{ other_entry.conference_start.strftime('%d %b') }}{% if other_entry.conference_end %} - {{ other_entry.conference_end.strftime('%d %b') }}{% endif %}</span>
+      {% endif %}
+      {% if other_entry.vacation_days %}<span class="text-gray-400">{{ other_entry.vacation_days }} vacation day{{ 's' if other_entry.vacation_days != 1 }}</span>{% endif %}
+      {% if other_entry.cost and other_entry.cost.total > 0 %}
+      <span class="text-orange-500">{{ "{:,.0f}".format(other_entry.cost.total) }}&euro;</span>
+      {% if other_entry.cost.covered %}<span class="text-green-600">{{ "{:,.0f}".format(other_entry.cost.covered) }}&euro; covered</span>{% endif %}
+      {% endif %}
+    </div>
+    {% for talk in other_entry.talks %}
+    <div class="flex items-center gap-2 mt-1 ml-4">
+      <span class="w-2 h-2 rounded-full flex-shrink-0
+        {% if talk.status == 'accepted' %}bg-green-500
+        {% elif talk.status == 'rejected' %}bg-red-400
+        {% elif talk.status == 'waitlisted' %}bg-purple-400
+        {% elif talk.status == 'withdrawn' %}bg-orange-400
+        {% else %}bg-gray-300{% endif %}"></span>
+      <span class="text-gray-600">{{ talk.title or talk.talk }}</span>
+      {% if talk.title %}<span class="text-gray-400">({{ talk.talk }})</span>{% endif %}
+      <span class="{% if talk.status == 'accepted' %}text-green-600{% else %}text-gray-400{% endif %}">{{ talk.status }}</span>
+    </div>
+    {% endfor %}
+    {% if other_entry.status and other_entry.status not in ('rejected', 'withdrawn') %}
+    <div class="mt-3 ml-4">
+      {{ cost_form(other_entry.cost, other_year, conf.name) }}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Conference details -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-gray-500">
+  <div class="flex flex-wrap gap-2">
+    {% if conf.budget %}<span class="border border-gray-300 rounded px-2 py-0.5">Budget: <span class="{% if conf.budget == 'full' %}text-green-600{% elif conf.budget == 'partial' %}text-yellow-600{% elif conf.budget == 'ask' %}text-gray-500{% elif conf.budget == 'none' %}text-red-600{% endif %}">{{ conf.budget }}</span></span>{% endif %}
+    {% if conf.difficulty in ('hard', 'longshot') %}<span class="border border-gray-300 rounded px-2 py-0.5 flex items-center gap-1">{{ difficulty_icon(conf.difficulty, 14) }} {{ 'Big' if conf.difficulty == 'longshot' else 'Small' }} longshot</span>{% endif %}
+    {% if conf.lang %}<span class="border border-gray-300 rounded px-2 py-0.5">Language: {{ conf.lang }}</span>{% endif %}
+  </div>
+  {% if conf.topic_fit %}<div class="mt-2">Topic fit: {{ conf.topic_fit }}</div>{% endif %}
+  {% if conf.notes %}<div class="mt-1">Notes: {{ conf.notes }}</div>{% endif %}
+  {% if conf.cfp %}
+  <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span class="font-medium text-gray-600">CFP</span>
+    {% if conf.cfp.url %}<a href="{{ conf.cfp.url }}" target="_blank" class="text-blue-500 hover:underline">{{ conf.cfp.url }}</a>{% endif %}
+    {% if conf.cfp.site %}<span>({{ conf.cfp.site }})</span>{% endif %}
+    {% if year_entry and (year_entry.cfp_open or year_entry.cfp_close) %}<span>{{ year_entry.cfp_open.strftime('%d %b') if year_entry.cfp_open else '?' }} - {{ year_entry.cfp_close.strftime('%d %b') if year_entry.cfp_close else '?' }}</span>{% endif %}
+    {% if conf.cfp.presumed_open or conf.cfp.presumed_close %}<span class="text-gray-400">presumed {{ conf.cfp.presumed_open or '?' }} to {{ conf.cfp.presumed_close or '?' }}</span>{% endif %}
+    {% if conf.cfp.formats %}<span>{{ conf.cfp.formats }}</span>{% endif %}
+    {% if conf.cfp.notes %}<span>{{ conf.cfp.notes }}</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

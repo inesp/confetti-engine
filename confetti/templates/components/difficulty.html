@@ -1,0 +1,22 @@
+{% macro favorite_star(conf, size=14) %}
+{% if conf.favorite %}
+<svg class="inline-block align-middle flex-shrink-0" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="#FFDD00" stroke="#FFDD00" stroke-width="2" stroke-linejoin="round" title="favorite"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+{% endif %}
+{% endmacro %}
+
+{% macro difficulty_icon(level, size=16) %}
+{# Only longshots are marked: 'hard' = small longshot, 'longshot' = big longshot.
+   Every other level renders nothing. #}
+{% if level == 'hard' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline-block align-middle" title="small longshot">
+  <path d="M4 36 L20 17 L36 36 Z" fill="#ef4444" opacity="0.85"/>
+  <line x1="4" y1="36" x2="36" y2="36" stroke="#ef4444" stroke-width="1.5"/>
+</svg>
+{% elif level == 'longshot' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline-block align-middle" title="big longshot">
+  <path d="M0 36 L10 14 L15 20 L20 2 L25 12 L30 16 L38 36 Z" fill="#ef4444" opacity="0.85"/>
+  <path d="M18 2 L20 2 L22 2" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="0" y1="36" x2="40" y2="36" stroke="#ef4444" stroke-width="1.5"/>
+</svg>
+{% endif %}
+{% endmacro %}

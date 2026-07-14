@@ -1,0 +1,41 @@
+# budget: partial, difficulty: moderate, talk withdrawn, money still owed.
+- name: "Sundown JS Days"
+  city: "Barcelona"
+  country: "Spain"
+  website: "https://example.com/sundown-js-days"
+
+  cfp:
+    url: "https://sessionize.com/sundown-js-days"
+    site: "sessionize"
+    formats: "30min, 45min"
+    notes: ""
+    presumed_open: "06-01"
+    presumed_close: "07-31"
+
+  budget: partial
+  difficulty: moderate
+  topic_fit: "example-async"
+  notes: "Withdrew after a schedule clash. They still owe part of the travel."
+
+  presumed:
+    conference_start: "11-06"
+    conference_end: "11-07"
+
+  years:
+    2026:
+      cfp_open: 2026-06-02
+      cfp_close: 2026-07-30
+      notify: "Decisions by 20 Aug"
+      conference_start: 2026-11-06
+      conference_end: 2026-11-07
+      cost:
+        flight: 120
+        hotel: 250
+        extra: 60
+        promised: 300
+        covered: 200
+      vacation_days: 1
+      talks:
+        - talk: example-async
+          status: withdrawn
+          title: "Example Talk: Async Things"

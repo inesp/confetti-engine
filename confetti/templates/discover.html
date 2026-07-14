@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Discover Control -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="text-lg font-semibold text-gray-900">Find new conferences</h3>
+      <p class="text-gray-500 mt-1">Uses Claude Code to search the web for conferences that match your talks and preferences.</p>
+    </div>
+    <form method="POST" action="/discover/start">
+      <button id="discover-btn" type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg">
+        Discover
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Progress + Log -->
+<div id="log-section" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hidden">
+  <div id="progress" class="flex items-center justify-between mb-4 hidden">
+    <div class="flex items-center">
+      <div class="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full mr-3"></div>
+      <span id="progress-text" class="text-gray-600">Searching for conferences... this may take a few minutes.</span>
+    </div>
+    <form method="POST" action="/discover/stop">
+      <button type="submit" id="stop-btn" class="text-red-600 hover:text-red-800 font-medium">Stop</button>
+    </form>
+  </div>
+  <div id="log-tabs" class="flex gap-4 mb-3 hidden">
+    <button type="button" id="log-tab-current" class="font-medium text-purple-700 border-b-2 border-purple-700 pb-1">This run</button>
+    <button type="button" id="log-tab-prev" class="font-medium text-gray-500 hover:text-gray-700 pb-1 hidden">Previous run</button>
+  </div>
+  <pre id="log-output" class="bg-gray-900 text-green-400 text-sm rounded-lg p-4 max-h-96 overflow-y-auto font-mono leading-relaxed"></pre>
+</div>
+
+<!-- Results -->
+<div id="results-section" class="hidden">
+  <div id="results-list" class="space-y-4"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let polling = false;
+
+  const BUDGET_COLORS = {
+    'full': 'bg-green-100 text-green-800',
+    'partial': 'bg-yellow-100 text-yellow-800',
+    'none': 'bg-red-100 text-red-800',
+    'unknown': 'bg-gray-100 text-gray-600',
+  };
+
+  const MOUNTAIN_COLORS = {
+    'easy': '#22c55e',
+    'moderate': '#eab308',
+    'hard': '#f97316',
+    'longshot': '#ef4444',
+  };
+
+  const MOUNTAIN_PATHS = {
+    'easy': '<path d="M4 36 L20 18 L36 36 Z" fill="{c}" opacity="0.85"/><line x1="4" y1="36" x2="36" y2="36" stroke="{c}" stroke-width="1.5"/>',
+    'moderate': '<path d="M2 36 L18 12 L26 22 L34 36 Z" fill="{c}" opacity="0.85"/><line x1="2" y1="36" x2="38" y2="36" stroke="{c}" stroke-width="1.5"/>',
+    'hard': '<path d="M0 36 L14 8 L20 16 L28 4 L38 36 Z" fill="{c}" opacity="0.85"/><line x1="0" y1="36" x2="40" y2="36" stroke="{c}" stroke-width="1.5"/>',
+    'longshot': '<path d="M0 36 L10 14 L15 20 L20 2 L25 12 L30 16 L38 36 Z" fill="{c}" opacity="0.85"/><path d="M18 2 L20 2 L22 2" stroke="white" stroke-width="1.5" stroke-linecap="round"/><line x1="0" y1="36" x2="40" y2="36" stroke="{c}" stroke-width="1.5"/>',
+  };
+
+  function difficultyIconSvg(level, size = 16) {
+    const c = MOUNTAIN_COLORS[level];
+    const path = MOUNTAIN_PATHS[level];
+    if (!c || !path) return '';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline-block align-middle" title="${level}">${path.replace(/\{c\}/g, c)}</svg>`;
+  }
+
+  const SELECTIVITY_COLORS = {
+    'low': 'bg-green-100 text-green-800',
+    'medium': 'bg-yellow-100 text-yellow-800',
+    'high': 'bg-red-100 text-red-800',
+  };
+
+  function renderResult(item, idx) {
+    if (item.name === 'Error') {
+      return `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-red-800">${item.why}</p>
+      </div>`;
+    }
+
+    const budgetClass = BUDGET_COLORS[item.budget] || BUDGET_COLORS['unknown'];
+    const budgetLabel = item.budget || 'unknown';
+
+    const selClass = SELECTIVITY_COLORS[item.selectivity] || 'bg-gray-100 text-gray-600';
+
+    let details = [];
+    if (item.attendees) details.push(`${item.attendees} attendees`);
+    if (item.conference_dates) details.push(`Dates: ${item.conference_dates}`);
+    if (item.cfp_deadline) details.push(`CFP deadline: ${item.cfp_deadline}`);
+
+    const suggestedFile = item.suggested_filename || 'discovered.yaml';
+
+    return `<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+      <div class="flex items-start justify-between">
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <h3 class="text-lg font-semibold text-gray-900">${item.name}</h3>
+            <span class="px-2 py-0.5 rounded-full font-medium ${budgetClass}">budget: ${budgetLabel}</span>
+            ${item.selectivity ? `<span class="px-2 py-0.5 rounded-full font-medium ${selClass}">selectivity: ${item.selectivity}</span>` : ''}
+            ${item.difficulty_for_me ? `<span class="inline-flex items-center gap-1">${difficultyIconSvg(item.difficulty_for_me)} <span class="text-gray-600">${item.difficulty_for_me}</span></span>` : ''}
+          </div>
+          <p class="text-gray-500 mb-2">${item.city}, ${item.country}
+            ${item.website ? ` &mdash; <a href="${item.website}" target="_blank" class="text-blue-500 hover:underline">${item.website}</a>` : ''}
+          </p>
+          <p class="text-gray-700 mb-3">${item.why}</p>
+          ${item.topic_fit ? `<p class="text-gray-600 mb-2"><span class="font-medium">Talks that fit:</span> ${item.topic_fit}</p>` : ''}
+          ${details.length ? `<p class="text-gray-500">${details.join(' &bull; ')}</p>` : ''}
+          ${item.cfp_url ? `<p class="mt-1"><a href="${item.cfp_url}" target="_blank" class="text-blue-500 hover:underline">CFP link</a></p>` : ''}
+          ${item.notes ? `<p class="text-gray-500 mt-2 italic">${item.notes}</p>` : ''}
+        </div>
+        <div class="ml-4 flex-shrink-0">
+          <div class="flex items-center gap-2" id="save-row-${idx}">
+            <input type="text" value="${suggestedFile}" class="save-filename border border-gray-300 rounded px-2 py-1 text-gray-700 w-40 focus:outline-none focus:border-purple-400" />
+            <button data-conf="${btoa(JSON.stringify(item))}" data-idx="${idx}"
+              class="save-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition-colors">
+              Save
+            </button>
+            <button data-name="${item.name}" data-idx="${idx}"
+              class="skip-btn text-gray-400 hover:text-red-500 font-medium px-2 py-1.5 rounded-lg transition-colors" title="Skip this conference">
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.addEventListener('click', function(e) {
+    const skipBtn = e.target.closest('.skip-btn');
+    if (skipBtn && !skipBtn.disabled) {
+      const name = skipBtn.dataset.name;
+      const card = skipBtn.closest('.bg-white.rounded-lg');
+      skipBtn.disabled = true;
+      skipBtn.textContent = '...';
+
+      fetch('/discover/skip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name}),
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && card) {
+          card.style.transition = 'opacity 0.3s';
+          card.style.opacity = '0';
+          setTimeout(() => card.remove(), 300);
+        }
+      })
+      .catch(() => { skipBtn.disabled = false; skipBtn.innerHTML = '&times;'; });
+      return;
+    }
+
+    const btn = e.target.closest('.save-btn');
+    if (!btn || btn.disabled) return;
+
+    const item = JSON.parse(atob(btn.dataset.conf));
+    const row = document.getElementById('save-row-' + btn.dataset.idx);
+    const input = row.querySelector('.save-filename');
+    const filename = input.value.trim();
+    if (!filename) return;
+
+    btn.disabled = true;
+    input.disabled = true;
+    btn.textContent = 'Saving...';
+
+    fetch('/discover/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({...item, filename: filename}),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        btn.textContent = 'Saved';
+        btn.classList.remove('bg-gray-100', 'hover:bg-gray-200', 'text-gray-700');
+        btn.classList.add('bg-green-100', 'text-green-700');
+        input.classList.add('bg-green-50');
+      } else {
+        btn.textContent = 'Error';
+        btn.disabled = false;
+        input.disabled = false;
+      }
+    })
+    .catch(() => {
+      btn.textContent = 'Error';
+      btn.disabled = false;
+      input.disabled = false;
+    });
+  });
+
+  let logWhich = 'current';
+
+  function selectLog(which) {
+    logWhich = which;
+    const active = 'font-medium text-purple-700 border-b-2 border-purple-700 pb-1';
+    const idle = 'font-medium text-gray-500 hover:text-gray-700 pb-1';
+    document.getElementById('log-tab-current').className = which === 'current' ? active : idle;
+    document.getElementById('log-tab-prev').className = (which === 'prev' ? active : idle);
+    fetchLog();
+  }
+
+  function fetchLog() {
+    fetch('/discover/log' + (logWhich === 'prev' ? '?prev=1' : ''))
+      .then(r => r.json())
+      .then(data => {
+        if (data.has_prev) {
+          document.getElementById('log-tab-prev').classList.remove('hidden');
+        }
+        if (data.lines.length > 0 || data.has_prev) {
+          document.getElementById('log-section').classList.remove('hidden');
+          document.getElementById('log-tabs').classList.remove('hidden');
+        }
+        const logOutput = document.getElementById('log-output');
+        logOutput.textContent = data.lines.join('\n');
+        logOutput.scrollTop = logOutput.scrollHeight;
+      })
+      .catch(() => {});
+  }
+
+  document.getElementById('log-tab-current').addEventListener('click', () => selectLog('current'));
+  document.getElementById('log-tab-prev').addEventListener('click', () => selectLog('prev'));
+
+  let pollStartTime = null;
+
+  function formatElapsed(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    if (m > 0) return m + 'm ' + (s % 60) + 's';
+    return s + 's';
+  }
+
+  function startPolling() {
+    polling = true;
+    pollStartTime = Date.now();
+    document.getElementById('discover-btn').disabled = true;
+    document.getElementById('discover-btn').textContent = 'Running...';
+    document.getElementById('log-section').classList.remove('hidden');
+    document.getElementById('progress').classList.remove('hidden');
+    selectLog('current');
+    poll();
+  }
+
+  function poll() {
+    if (!polling) return;
+
+    // Update elapsed time
+    if (pollStartTime) {
+      const elapsed = formatElapsed(Date.now() - pollStartTime);
+      document.getElementById('progress-text').textContent = 'Searching for conferences... (' + elapsed + ')';
+    }
+
+    fetch('/discover/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.results.length > 0) {
+          document.getElementById('results-section').classList.remove('hidden');
+          document.getElementById('results-list').innerHTML =
+            data.results.map((r, i) => renderResult(r, i)).join('');
+        }
+
+        if (data.status === 'done' || data.status === 'stopped') {
+          polling = false;
+          pollStartTime = null;
+          document.getElementById('progress').classList.add('hidden');
+          document.getElementById('discover-btn').disabled = false;
+          document.getElementById('discover-btn').textContent = 'Discover';
+
+          if (data.status === 'stopped' && data.results.length === 0) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-list').innerHTML =
+              '<p class="text-gray-500">Stopped before results were ready.</p>';
+          }
+          fetchLog();
+        } else {
+          fetchLog();
+          setTimeout(poll, 2000);
+        }
+      })
+      .catch(() => setTimeout(poll, 2000));
+  }
+
+  // Check state on page load
+  fetch('/discover/status')
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'running') {
+        startPolling();
+      } else {
+        if ((data.status === 'done' || data.status === 'stopped') && data.results.length > 0) {
+          polling = true;
+          poll();
+        }
+        fetchLog();
+      }
+    });
+
+  // Intercept form submit
+  document.querySelector('form[action="/discover/start"]').addEventListener('submit', () => {
+    setTimeout(startPolling, 500);
+  });
+</script>
+{% endblock %}

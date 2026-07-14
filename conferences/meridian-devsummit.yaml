@@ -1,0 +1,58 @@
+# A conference series with several city editions lives in one file as a list.
+# Amsterdam: budget full, difficulty moderate, talk waitlisted.
+# Vienna:    budget ask, difficulty easy, presumed-only (no year entries yet).
+- name: "Meridian Dev Summit Amsterdam"
+  city: "Amsterdam"
+  country: "Netherlands"
+  website: "https://example.com/meridian-amsterdam"
+
+  cfp:
+    url: "https://sessionize.com/meridian-amsterdam"
+    site: "sessionize"
+    formats: "45min"
+    notes: ""
+    presumed_open: "02-01"
+    presumed_close: "03-31"
+
+  budget: full
+  difficulty: moderate
+  topic_fit: "example-testing, example-async"
+  notes: "Well organised, speaker dinner, records talks."
+
+  presumed:
+    conference_start: "06-11"
+    conference_end: "06-12"
+
+  years:
+    2026:
+      cfp_open: 2026-02-03
+      cfp_close: 2026-03-30
+      notify: "Decisions by 25 Apr"
+      conference_start: 2026-06-11
+      conference_end: 2026-06-12
+      talks:
+        - talk: example-testing
+          status: waitlisted
+          title: "Example Talk: Testing"
+
+- name: "Meridian Dev Summit Vienna"
+  city: "Vienna"
+  country: "Austria"
+  website: "https://example.com/meridian-vienna"
+
+  cfp:
+    url: "https://sessionize.com/meridian-vienna"
+    site: "sessionize"
+    formats: "45min"
+    notes: ""
+    presumed_open: "08-01"
+    presumed_close: "09-30"
+
+  budget: ask
+  difficulty: easy
+  topic_fit: "example-observability"
+  notes: "Sister event to Amsterdam. No edition tracked yet, only presumed dates."
+
+  presumed:
+    conference_start: "11-19"
+    conference_end: "11-20"
