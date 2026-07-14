@@ -21,6 +21,10 @@ The conferences page: a CFP timeline, a submission pipeline, and what's coming u
 
 ![Conferences overview](docs/imgs/confs-list.png)
 
+Each conference has a detail page: edit the CFP window, log talk submissions, or skip an edition (or the whole conference).
+
+![Conference detail page](docs/imgs/one-conf-details.png)
+
 The past page: what each trip cost, how many vacation days it burned, and the acceptance rate per talk.
 
 ![Past conferences and talk stats](docs/imgs/past-talks.png)
