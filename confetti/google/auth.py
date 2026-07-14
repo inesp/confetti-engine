@@ -65,7 +65,7 @@ def get_auth_status() -> AuthStatus:
     if not _settings.HAS_CREDENTIALS:
         return AuthStatus(
             status=GoogleAuthStatus.MISSING_CREDENTIALS,
-            message=f"Missing {_settings.CREDENTIALS_FILE_NAME}. Download it from Google Cloud Console.",
+            message=f"Missing {Path(_settings.CREDENTIALS_FILE_NAME).name}. Download it from Google Cloud Console.",
         )
 
     if not _is_token_valid():

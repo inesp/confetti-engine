@@ -33,7 +33,7 @@
         hotel: 400
         extra: 120
         promised: 400
-        covered: 0
+        covered: 400
       vacation_days: 2
       talks:
         - talk: example-observability

@@ -15,6 +15,29 @@ Each conference lives in its own YAML file in `conferences/`.
 2. **Open [http://localhost:1250](http://localhost:1250)** to check that everything is set up correctly.
 
 
+## What it looks like
+
+The conferences page: a CFP timeline, a submission pipeline, and what's coming up next.
+
+![Conferences overview](docs/imgs/confs-list.png)
+
+The past page: what each trip cost, how many vacation days it burned, and the acceptance rate per talk.
+
+![Past conferences and talk stats](docs/imgs/past-talks.png)
+
+Scouting: checks every conference for updated dates and tells you why it skipped the rest.
+
+![Scouting for CFP dates](docs/imgs/scouting.png)
+
+Discovery: a Claude agent searches the web for new conferences that fit your talks.
+
+![Discovering new conferences](docs/imgs/discover.png)
+
+Bad YAML does not crash the app. Every problem lands on the home page with the file and the reason. The home page also tracks the money conferences still owe you.
+
+![Validation warnings and money owed on the home page](docs/imgs/error-msgs.png)
+
+
 ## How it works
 
 1. **Track conferences**: I add a YAML file per conference in `conferences/` with CFP dates, conference dates, travel info. But you can add any number of conferences into 1 YAML file (group them as you see fit).
@@ -47,6 +70,10 @@ I've set this up to be forever in test mode. But if you have a working OAuth acc
 5. Home page shows green "Connected" status with a calendar picker
 6. Pick which calendar to sync to, hit "Sync now"
 
+Once connected, the home page shows the sync status and what changed on the last run:
+
+![Google Calendar connected and synced](docs/imgs/synced-data.png)
+
 
 ## Development
 
@@ -59,8 +86,8 @@ uv sync
 # Run the server
 make up
 
-# Lint & format
-make lint
+# Lint & format & test
+make lint test
 ```
 
 ---
