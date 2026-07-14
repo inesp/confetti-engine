@@ -1,5 +1,5 @@
 [project]
-name = "confetti"
+name = "confetti-engine"
 version = "0.1.0"
 description = "Conference CFP tracker and Google Calendar sync"
 readme = "README.md"
