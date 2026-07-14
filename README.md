@@ -70,9 +70,29 @@ I've set this up to be forever in test mode. But if you have a working OAuth acc
 5. Home page shows green "Connected" status with a calendar picker
 6. Pick which calendar to sync to, hit "Sync now"
 
+The panel walks you through each state. No credentials yet:
+
+![Missing credentials](docs/imgs/google-1.png)
+
+Credentials in place, ready to authenticate:
+
+![Credentials found](docs/imgs/google-2.png)
+
+Authenticated, pick a calendar:
+
+![Pick a calendar](docs/imgs/google-3.png)
+
+Connected and ready to sync:
+
+![Connected](docs/imgs/google-4.png)
+
 Once connected, the home page shows the sync status and what changed on the last run:
 
 ![Google Calendar connected and synced](docs/imgs/synced-data.png)
+
+When the token expires, the panel says so and tells you how to re-authenticate:
+
+![Token expired](docs/imgs/google-7.png)
 
 
 ## Development
