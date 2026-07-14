@@ -33,7 +33,7 @@
         hotel: 250
         extra: 60
         promised: 300
-        covered: 200
+        covered: 300
       vacation_days: 1
       talks:
         - talk: example-async
