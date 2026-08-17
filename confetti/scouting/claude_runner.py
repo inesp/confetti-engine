@@ -21,14 +21,17 @@ _stop_requested = threading.Event()
 # The scout/discover agents only research the web and return JSON; the Python
 # code writes the YAML. So they need no project context and only two tools.
 # Running from a scratch dir (not PROJECT_ROOT) skips loading the project
-# CLAUDE.md; --strict-mcp-config drops all MCP servers; --allowedTools trims
-# the built-in tool set. Together this strips the system prompt to a fraction
-# of its former size, which is where the token cost lived.
+# CLAUDE.md; --strict-mcp-config drops all MCP servers; --tools strips the
+# schemas of every built-in tool except these two out of the context
+# (--allowedTools alone does NOT do that: it only grants permission, the
+# other tools' schemas still ship, ~17k tokens of them); --allowedTools then
+# pre-approves the two survivors so headless runs never stall on permission.
 _AGENT_TOOLS = "WebSearch,WebFetch"
 
-# Replaces Claude Code's default system prompt (~15k tokens of coding-agent
-# scaffolding) with a minimal research brief. The task instructions live in the
-# per-run prompt; this only sets the role and the two rules that matter.
+# Replaces Claude Code's default coding-agent system prompt with a minimal
+# research brief. The task instructions live in the per-run prompt; this only
+# sets the role and the two rules that matter. Measured (Aug 2026, haiku): a
+# default invocation receives ~27k input tokens, this trimmed setup ~2.3k.
 _AGENT_SYSTEM_PROMPT = (
     "You are a precise web research agent. You find facts by fetching and searching the web "
     "with the WebFetch and WebSearch tools. Report only what you actually find on the pages, "
@@ -71,6 +74,8 @@ def run_claude(prompt: str, log_file: Path, timeout: float, model: str, max_budg
             "stream-json",
             "--verbose",
             "--strict-mcp-config",
+            "--tools",
+            _AGENT_TOOLS,
             "--allowedTools",
             _AGENT_TOOLS,
             "--system-prompt",
@@ -215,7 +220,12 @@ def _stream_to_log(proc: subprocess.Popen, log_file: Path) -> str:  # type: igno
                 result_text = event.get("result", "")
                 duration = event.get("duration_ms", 0)
                 usage = event.get("usage", {})
-                tokens_in = usage.get("input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
+                # cache_creation counts too: on a fresh run it holds most of the context
+                tokens_in = (
+                    usage.get("input_tokens", 0)
+                    + usage.get("cache_creation_input_tokens", 0)
+                    + usage.get("cache_read_input_tokens", 0)
+                )
                 tokens_out = usage.get("output_tokens", 0)
                 cost = event.get("total_cost_usd", 0)
                 _log(f, f"=== Done in {duration / 1000:.1f}s | {tokens_in} in, {tokens_out} out | ${cost:.4f} ===")
