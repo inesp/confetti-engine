@@ -4,6 +4,7 @@ from flask import Blueprint
 from flask import render_template
 
 from confetti.views.conf_stats import build_conf_summaries
+from confetti.views.conf_stats import build_submission_boxes
 from confetti.views.conf_stats import conf_acceptance_by_year
 from confetti.views.conf_stats import conf_acceptance_rate
 from confetti.views.talk_stats import build_talk_stats
@@ -28,6 +29,7 @@ def index() -> str:
         conf_summaries
     )
     conf_year_rates = conf_acceptance_by_year(conf_summaries)
+    submission_years = build_submission_boxes(conferences)
 
     years: dict[int, list] = {}
     for pc in past_conferences:
@@ -51,5 +53,6 @@ def index() -> str:
         conf_total_no_withdrawn=conf_total_no_withdrawn,
         conf_rate_no_withdrawn=conf_rate_no_withdrawn,
         conf_year_rates=conf_year_rates,
+        submission_years=submission_years,
         today=date.today(),
     )

@@ -17,20 +17,6 @@
 {% endif %}
 {% endmacro %}
 
-{% macro year_outcomes(label, icon, colour, outcomes) %}
-{% if outcomes %}
-<div>
-  <div class="{{ colour }} font-semibold mb-1">{{ icon }} {{ label }} ({{ outcomes|length }})</div>
-  {% for outcome in outcomes %}
-  <div class="text-gray-700">
-    {{ outcome.name }}&nbsp;<span class="text-gray-400">{{ outcome.country_code }}</span>
-    {% if outcome.talks %}<span class="text-gray-400">· {{ outcome.talks | join(', ') }}</span>{% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-{% endmacro %}
-
 {% macro box_colour(status) %}
 {%- if status == 'accepted' -%}bg-green-500 border-green-600
 {%- elif status == 'rejected' -%}bg-red-400 border-red-500
@@ -272,6 +258,48 @@
             {% elif sub.status == 'withdrawn' %}text-orange-500
             {% else %}text-gray-400{% endif %}
           ">{{ sub.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Submissions -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-gray-900">Submissions</h3>
+    <div class="flex flex-wrap items-center gap-4 text-gray-500">
+      {% for label, status in [('Accepted', 'accepted'), ('Rejected', 'rejected'), ('Withdrawn', 'withdrawn'), ('Waitlisted', 'waitlisted'), ('Waiting', 'submitted')] %}
+      <span class="inline-flex items-center gap-1.5">
+        <span class="w-4 h-4 rounded border {{ box_colour(status) }}"></span>{{ label }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="space-y-2">
+    {% for year, boxes in submission_years.items() %}
+    <div class="flex items-start gap-3">
+      <span class="w-12 font-semibold text-gray-900 tabular-nums leading-7">{{ year }}</span>
+      <div class="flex flex-wrap gap-1.5">
+        {% for box in boxes %}
+        <div class="relative w-7 h-7 rounded border {{ box_colour(box.status) }} cursor-default">
+          {% call hover_popup(position="above") %}
+            <div class="bg-white rounded-xl shadow-2xl border border-gray-200 w-[360px] p-4">
+              <div class="flex items-baseline justify-between gap-3">
+                <a href="{{ box.conf.website }}" target="_blank" class="text-blue-500 hover:underline font-semibold">{{ box.name }}</a>
+                <span class="text-gray-400">{{ box.country_code }} · {{ box.year }}</span>
+              </div>
+              <div class="{{ status_colour(box.status) }} font-medium mt-1">{{ box.status }}</div>
+              <div class="mt-2 pt-2 border-t border-gray-100 text-gray-700">
+                {% for talk in box.talks %}
+                <div>{{ talk }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endcall %}
         </div>
         {% endfor %}
       </div>

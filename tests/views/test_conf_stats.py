@@ -1,6 +1,10 @@
+from datetime import date
+
 from confetti.models import Conference, TalkEntry, TalkStatus, YearEntry
 from confetti.views.conf_stats import build_conf_summaries
+from confetti.views.conf_stats import build_submission_boxes
 from confetti.views.conf_stats import conf_acceptance_by_year
+from confetti.views.conf_stats import edition_outcome
 
 
 def _conf(name: str, years: dict[int, YearEntry]) -> Conference:
@@ -99,3 +103,28 @@ def test_acceptance_by_year_lists_conferences_per_outcome():
         [c.name for c in result.rejected_confs],
         [c.name for c in result.withdrawn_confs],
     ) == (["Alpha"], ["Beta"], ["Gamma"])
+
+
+def test_edition_outcome_withdrawn_beats_rejected():
+    entry = _year(TalkStatus.withdrawn, TalkStatus.rejected)
+    result = edition_outcome(entry)
+    assert result == TalkStatus.withdrawn
+
+
+def test_edition_outcome_waiting_beats_decided():
+    entry = _year(TalkStatus.rejected, TalkStatus.submitted)
+    result = edition_outcome(entry)
+    assert result == TalkStatus.submitted
+
+
+def test_submission_boxes_grouped_by_year_and_ordered_by_date():
+    confs = [
+        _conf("Late", {2026: YearEntry(conference_start=date(2026, 11, 1), talks=[TalkEntry(talk="a")])}),
+        _conf("Early", {2026: YearEntry(conference_start=date(2026, 3, 1), talks=[TalkEntry(talk="b")])}),
+        _conf("Older", {2025: YearEntry(conference_start=date(2025, 5, 1), talks=[TalkEntry(talk="c")])}),
+    ]
+    result = build_submission_boxes(confs)
+    assert {year: [box.name for box in boxes] for year, boxes in result.items()} == {
+        2026: ["Early", "Late"],
+        2025: ["Older"],
+    }

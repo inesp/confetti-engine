@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import date
 
-from confetti.models import Conference, TalkStatus
+from confetti.models import Conference, TalkStatus, YearEntry
 
 DECIDED_STATUSES = frozenset(
     {
@@ -211,3 +211,68 @@ def conf_acceptance_rate(
     rate_no_withdrawn = round(accepted / total_no_withdrawn * 100) if total_no_withdrawn else 0.0
 
     return accepted, total, rate, accepted, total_no_withdrawn, rate_no_withdrawn
+
+
+def edition_outcome(entry: YearEntry) -> TalkStatus | None:
+    """How one conference edition landed: accepted beats still-waiting beats withdrawn beats rejected.
+
+    Same precedence the acceptance rates use, so the strip and the numbers agree. Sidelined talks
+    count as rejected - they did not put me on stage.
+    """
+    statuses = {talk.status for talk in entry.talks}
+    if not statuses:
+        return None
+    for status in (TalkStatus.accepted, TalkStatus.submitted, TalkStatus.waitlisted, TalkStatus.withdrawn):
+        if status in statuses:
+            return status
+    return TalkStatus.rejected
+
+
+@dataclass
+class SubmissionBox:
+    """One submission to one conference edition, for the submission strip."""
+
+    conf: Conference
+    year: int
+    status: TalkStatus
+    talks: list[str]
+    sort_date: date
+
+    @property
+    def name(self) -> str:
+        return self.conf.name
+
+    @property
+    def country_code(self) -> str:
+        return self.conf.country_code
+
+
+def build_submission_boxes(conferences: list[Conference]) -> dict[int, list[SubmissionBox]]:
+    """Every submission, grouped by conference year, each year ordered as the conferences fall."""
+    by_year: dict[int, list[SubmissionBox]] = {}
+
+    for conf in conferences:
+        for year, entry in (conf.years or {}).items():
+            outcome = edition_outcome(entry) if entry else None
+            if entry is None or outcome is None:
+                continue
+
+            conference_start = entry.conference_start
+            if conference_start is None and conf.presumed:
+                conference_start = conf.presumed.build_conference_start(year)
+            sort_date = conference_start or entry.cfp_close or date(year, 12, 31)
+
+            by_year.setdefault(year, []).append(
+                SubmissionBox(
+                    conf=conf,
+                    year=year,
+                    status=outcome,
+                    talks=[talk.title or talk.talk for talk in entry.talks],
+                    sort_date=sort_date,
+                )
+            )
+
+    for boxes in by_year.values():
+        boxes.sort(key=lambda box: (box.sort_date, box.conf.name))
+
+    return {year: by_year[year] for year in sorted(by_year, reverse=True)}
