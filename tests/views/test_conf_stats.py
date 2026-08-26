@@ -1,5 +1,6 @@
 from confetti.models import Conference, TalkEntry, TalkStatus, YearEntry
 from confetti.views.conf_stats import build_conf_summaries
+from confetti.views.conf_stats import conf_acceptance_by_year
 
 
 def _conf(name: str, years: dict[int, YearEntry]) -> Conference:
@@ -66,3 +67,35 @@ def test_multiple_years():
     result = build_conf_summaries(confs)
     assert result[0].accepted == 1
     assert result[0].rejected == 1
+
+
+def test_acceptance_by_year_splits_years():
+    confs = [
+        _conf("Alpha", {2025: _year(TalkStatus.accepted), 2026: _year(TalkStatus.rejected)}),
+        _conf("Beta", {2026: _year(TalkStatus.accepted)}),
+    ]
+    result = conf_acceptance_by_year(build_conf_summaries(confs))
+    assert [(y.year, y.accepted, y.total, y.rate) for y in result] == [(2026, 1, 2, 50), (2025, 1, 1, 100)]
+
+
+def test_acceptance_by_year_excludes_withdrawn_from_second_rate():
+    confs = [
+        _conf("Alpha", {2026: _year(TalkStatus.accepted)}),
+        _conf("Beta", {2026: _year(TalkStatus.withdrawn)}),
+    ]
+    result = conf_acceptance_by_year(build_conf_summaries(confs))
+    assert [(y.year, y.rate, y.total_no_withdrawn, y.rate_no_withdrawn) for y in result] == [(2026, 50, 1, 100)]
+
+
+def test_acceptance_by_year_lists_conferences_per_outcome():
+    confs = [
+        _conf("Alpha", {2026: _year(TalkStatus.accepted)}),
+        _conf("Beta", {2026: _year(TalkStatus.rejected)}),
+        _conf("Gamma", {2026: _year(TalkStatus.withdrawn)}),
+    ]
+    result = conf_acceptance_by_year(build_conf_summaries(confs))[0]
+    assert (
+        [c.name for c in result.accepted_confs],
+        [c.name for c in result.rejected_confs],
+        [c.name for c in result.withdrawn_confs],
+    ) == (["Alpha"], ["Beta"], ["Gamma"])

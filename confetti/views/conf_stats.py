@@ -120,6 +120,85 @@ def reimbursements_owed(conferences: list[Conference]) -> tuple[list[OwedItem], 
     return owed, total
 
 
+@dataclass
+class YearConfOutcome:
+    """One conference edition, as it landed in a given year."""
+
+    name: str
+    country_code: str
+    talks: list[str]
+    conf_date: date | None = None
+
+
+@dataclass
+class YearAcceptance:
+    """Accepted vs. submitted conferences for a single year."""
+
+    year: int
+    accepted_confs: list[YearConfOutcome] = field(default_factory=list)
+    rejected_confs: list[YearConfOutcome] = field(default_factory=list)
+    withdrawn_confs: list[YearConfOutcome] = field(default_factory=list)
+
+    @property
+    def accepted(self) -> int:
+        return len(self.accepted_confs)
+
+    @property
+    def rejected(self) -> int:
+        return len(self.rejected_confs)
+
+    @property
+    def withdrawn(self) -> int:
+        return len(self.withdrawn_confs)
+
+    @property
+    def total(self) -> int:
+        return self.accepted + self.rejected + self.withdrawn
+
+    @property
+    def rate(self) -> int:
+        return round(self.accepted / self.total * 100) if self.total else 0
+
+    @property
+    def total_no_withdrawn(self) -> int:
+        return self.accepted + self.rejected
+
+    @property
+    def rate_no_withdrawn(self) -> int:
+        return round(self.accepted / self.total_no_withdrawn * 100) if self.total_no_withdrawn else 0
+
+
+def conf_acceptance_by_year(summaries: list[ConfSubmissionSummary]) -> list[YearAcceptance]:
+    """Acceptance rate per conference year, most recent year first, with the conferences behind each number."""
+    by_year: dict[int, YearAcceptance] = {}
+
+    for summary in summaries:
+        for detail in summary.year_details:
+            year_acceptance = by_year.setdefault(detail.year, YearAcceptance(year=detail.year))
+            outcome = YearConfOutcome(
+                name=summary.name,
+                country_code=summary.country_code,
+                talks=detail.talks,
+                conf_date=detail.conf_date,
+            )
+            if detail.status == TalkStatus.accepted:
+                year_acceptance.accepted_confs.append(outcome)
+            elif detail.status == TalkStatus.withdrawn:
+                year_acceptance.withdrawn_confs.append(outcome)
+            else:
+                year_acceptance.rejected_confs.append(outcome)
+
+    def by_date(outcome: YearConfOutcome) -> tuple[date, str]:
+        return outcome.conf_date or date(9999, 12, 31), outcome.name
+
+    for year_acceptance in by_year.values():
+        year_acceptance.accepted_confs.sort(key=by_date)
+        year_acceptance.rejected_confs.sort(key=by_date)
+        year_acceptance.withdrawn_confs.sort(key=by_date)
+
+    return [by_year[year] for year in sorted(by_year, reverse=True)]
+
+
 def conf_acceptance_rate(
     summaries: list[ConfSubmissionSummary],
 ) -> tuple[int, int, float, int, int, float]:

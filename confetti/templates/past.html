@@ -3,6 +3,52 @@
 {% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
 {% from "components/money.html" import money %}
 
+{% macro year_outcomes(label, icon, colour, outcomes) %}
+{% if outcomes %}
+<div>
+  <div class="{{ colour }} font-semibold mb-1">{{ icon }} {{ label }} ({{ outcomes|length }})</div>
+  {% for outcome in outcomes %}
+  <div class="text-gray-700">
+    {{ outcome.name }}&nbsp;<span class="text-gray-400">{{ outcome.country_code }}</span>
+    {% if outcome.talks %}<span class="text-gray-400">· {{ outcome.talks | join(', ') }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro year_outcomes(label, icon, colour, outcomes) %}
+{% if outcomes %}
+<div>
+  <div class="{{ colour }} font-semibold mb-1">{{ icon }} {{ label }} ({{ outcomes|length }})</div>
+  {% for outcome in outcomes %}
+  <div class="text-gray-700">
+    {{ outcome.name }}&nbsp;<span class="text-gray-400">{{ outcome.country_code }}</span>
+    {% if outcome.talks %}<span class="text-gray-400">· {{ outcome.talks | join(', ') }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro box_colour(status) %}
+{%- if status == 'accepted' -%}bg-green-500 border-green-600
+{%- elif status == 'rejected' -%}bg-red-400 border-red-500
+{%- elif status == 'withdrawn' -%}bg-orange-400 border-orange-500
+{%- elif status == 'waitlisted' -%}bg-purple-400 border-purple-500
+{%- else -%}bg-gray-200 border-gray-300
+{%- endif -%}
+{% endmacro %}
+
+{% macro status_colour(status) %}
+{%- if status == 'accepted' -%}text-green-600
+{%- elif status == 'rejected' -%}text-red-500
+{%- elif status == 'withdrawn' -%}text-orange-500
+{%- elif status == 'waitlisted' -%}text-purple-500
+{%- else -%}text-gray-500
+{%- endif -%}
+{% endmacro %}
+
 {% block extra_head %}
 <style>
   .hide-money .money { display: none !important; }
@@ -242,6 +288,25 @@
   </div>
   <div class="w-full bg-gray-100 rounded-full h-2 mt-3">
     <div class="h-2 rounded-full bg-sky-400" style="width: {{ conf_rate }}%"></div>
+  </div>
+
+  <div class="mt-5 space-y-2">
+    {% for ya in conf_year_rates %}
+    <div class="relative flex items-center gap-3 cursor-default">
+      <span class="w-12 font-semibold text-gray-900 tabular-nums">{{ ya.year }}</span>
+      <div class="flex-grow bg-gray-100 rounded-full h-2">
+        <div class="h-2 rounded-full bg-sky-400" style="width: {{ ya.rate }}%"></div>
+      </div>
+      <span class="text-gray-500 tabular-nums whitespace-nowrap">{{ ya.accepted }}/{{ ya.total }} ({{ ya.rate }}%){% if ya.total_no_withdrawn != ya.total %} · {{ ya.accepted }}/{{ ya.total_no_withdrawn }} without withdrawn ({{ ya.rate_no_withdrawn }}%){% endif %}</span>
+      {% call hover_popup(position="above") %}
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 w-[420px] p-5 space-y-4">
+          {{ year_outcomes("Accepted", "✅", "text-green-600", ya.accepted_confs) }}
+          {{ year_outcomes("Rejected", "❌", "text-red-500", ya.rejected_confs) }}
+          {{ year_outcomes("Withdrawn", "↩️", "text-orange-500", ya.withdrawn_confs) }}
+        </div>
+      {% endcall %}
+    </div>
+    {% endfor %}
   </div>
 
   <div class="flex flex-wrap gap-2 mt-4">
