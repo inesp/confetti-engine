@@ -1,6 +1,7 @@
 from datetime import date
 
 from confetti.models import Cfp, Conference, TalkEntry, TalkStatus, YearEntry
+from confetti.views.conf_stats import ConfSubmissionSummary
 from confetti.views.conf_stats import build_conf_summaries
 from confetti.views.conf_stats import build_submission_boxes
 from confetti.views.conf_stats import conf_acceptance_by_year
@@ -191,3 +192,33 @@ def test_submission_boxes_guess_120_days_before_the_conference():
         2026: ["Late"],
         2025: ["Older", "Early"],
     }
+
+
+def test_pill_gradient_is_flat_when_every_year_landed_the_same():
+    summary = ConfSubmissionSummary(name="Conf", accepted=3)
+    result = summary.pill_gradient
+    assert result == "linear-gradient(90deg, #dcfce7 0%, #dcfce7 50.0%, #dcfce7 100%)"
+
+
+def test_pill_gradient_washes_from_rejected_into_accepted():
+    summary = ConfSubmissionSummary(name="Conf", accepted=1, rejected=1)
+    result = summary.pill_gradient
+    assert result == "linear-gradient(90deg, #fee2e2 0%, #fee2e2 25.0%, #dcfce7 75.0%, #dcfce7 100%)"
+
+
+def test_pill_gradient_passes_through_withdrawn_in_the_middle():
+    summary = ConfSubmissionSummary(name="Conf", accepted=1, rejected=1, withdrawn=1)
+    result = summary.pill_gradient
+    assert result == ("linear-gradient(90deg, #fee2e2 0%, #fee2e2 16.7%, #ffedd5 50.0%, #dcfce7 83.3%, #dcfce7 100%)")
+
+
+def test_pill_gradient_weights_bands_by_year_count():
+    summary = ConfSubmissionSummary(name="Conf", accepted=3, rejected=1)
+    result = summary.pill_gradient
+    assert result == "linear-gradient(90deg, #fee2e2 0%, #fee2e2 12.5%, #dcfce7 62.5%, #dcfce7 100%)"
+
+
+def test_pill_border_goes_neutral_once_the_record_is_mixed():
+    summary = ConfSubmissionSummary(name="Conf", accepted=1, rejected=1)
+    result = summary.pill_border
+    assert result == "border border-gray-300"

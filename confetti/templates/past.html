@@ -340,12 +340,8 @@
   <div class="flex flex-wrap gap-2 mt-4">
     {% for cs in conf_summaries %}
     <span class="relative group cursor-default">
-      <div class="relative inline-flex items-center px-3 py-1.5 rounded-full text-gray-700
-        {% if cs.rejected == 0 and cs.withdrawn == 0 %}bg-green-100 border border-green-300
-        {% elif cs.accepted == 0 and cs.withdrawn == 0 %}bg-red-50 border border-red-300
-        {% elif cs.accepted == 0 and cs.rejected == 0 %}bg-orange-50 border-2 border-orange-400
-        {% else %}bg-gray-50 border border-gray-300{% endif %}
-      ">
+      <div class="relative inline-flex items-center px-3 py-1.5 rounded-full text-gray-700 {{ cs.pill_border }}"
+        style="background-image: {{ cs.pill_gradient }}">
         {{ cs.name }}&nbsp;<span class="text-gray-400">{{ cs.country_code }}</span>
         {% if cs.total > 1 %}
         <span class="flex gap-0.5 ml-1.5">

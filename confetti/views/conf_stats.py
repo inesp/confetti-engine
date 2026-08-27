@@ -16,6 +16,14 @@ DECIDED_STATUSES = frozenset(
 )
 
 
+# Pill washes for the conference list: light enough to read gray text over, saturated enough that a
+# mixed record still reads as red-to-green at a glance.
+PILL_REJECTED = "#fee2e2"
+PILL_WITHDRAWN = "#ffedd5"
+PILL_ACCEPTED = "#dcfce7"
+PILL_NEUTRAL = "#f9fafb"
+
+
 @dataclass
 class ConfYearDetail:
     year: int
@@ -45,6 +53,45 @@ class ConfSubmissionSummary:
         for yd in sorted(self.year_details, key=lambda d: d.year):
             parts.append(f"{yd.year} ({yd.status}): {', '.join(yd.talks)}")
         return " | ".join(parts)
+
+    @property
+    def pill_gradient(self) -> str:
+        """The pill's background: rejected years on the left bleeding through withdrawn into accepted.
+
+        Each colour is pinned to the middle of its share of the pill, so a conference that went one
+        rejection and two acceptances reads as a wash from red into green rather than two hard blocks.
+        A conference with a single outcome ends up with that colour flat across the whole pill.
+        """
+        bands = [
+            (self.rejected, PILL_REJECTED),
+            (self.withdrawn, PILL_WITHDRAWN),
+            (self.accepted, PILL_ACCEPTED),
+        ]
+        present = [(count, colour) for count, colour in bands if count]
+        if not present:
+            return f"linear-gradient(90deg, {PILL_NEUTRAL} 0%, {PILL_NEUTRAL} 100%)"
+
+        stops = []
+        walked = 0.0
+        for count, colour in present:
+            share = count / self.total * 100
+            stops.append(f"{colour} {walked + share / 2:.1f}%")
+            walked += share
+
+        first_colour = present[0][1]
+        last_colour = present[-1][1]
+        return f"linear-gradient(90deg, {first_colour} 0%, {', '.join(stops)}, {last_colour} 100%)"
+
+    @property
+    def pill_border(self) -> str:
+        """Tailwind border classes: coloured when every year landed the same way, neutral once mixed."""
+        if self.rejected == 0 and self.withdrawn == 0:
+            return "border border-green-300"
+        if self.accepted == 0 and self.withdrawn == 0:
+            return "border border-red-300"
+        if self.accepted == 0 and self.rejected == 0:
+            return "border-2 border-orange-400"
+        return "border border-gray-300"
 
 
 def build_conf_summaries(conferences: list[Conference]) -> list[ConfSubmissionSummary]:
