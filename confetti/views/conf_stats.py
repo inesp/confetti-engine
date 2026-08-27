@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import date
 
+from confetti.constants import CFP_BEFORE_CONFERENCE
+from confetti.constants import CFP_ESTIMATED_DURATION
 from confetti.models import Conference, TalkStatus, YearEntry
 
 DECIDED_STATUSES = frozenset(
@@ -247,8 +249,35 @@ class SubmissionBox:
         return self.conf.country_code
 
 
+def submission_close_date(conf: Conference, year: int, entry: YearEntry) -> date | None:
+    """When the CFP I submitted to closed, falling back the same way Conference._resolve_next_cfp does.
+
+    Factual close first, then the presumed pattern (shifted back a year when it lands on or after the
+    conference itself, the Oct->Jan crossover), then the house guess: a CFP opens 180 days before the
+    conference and runs 60, so it closes 120 days out.
+    """
+    if entry.cfp_close:
+        return entry.cfp_close
+
+    conference_start = entry.conference_start
+    if conference_start is None and conf.presumed:
+        conference_start = conf.presumed.build_conference_start(year)
+
+    if conf.cfp:
+        presumed_close = conf.cfp.build_cfp_close(year)
+        if presumed_close and conference_start and presumed_close >= conference_start:
+            presumed_close = conf.cfp.build_cfp_close(year - 1)
+        if presumed_close:
+            return presumed_close
+
+    if conference_start:
+        return conference_start - (CFP_BEFORE_CONFERENCE - CFP_ESTIMATED_DURATION)
+
+    return None
+
+
 def build_submission_boxes(conferences: list[Conference]) -> dict[int, list[SubmissionBox]]:
-    """Every submission, grouped by conference year, each year ordered as the conferences fall."""
+    """Every submission, grouped by the year its CFP closed, each year ordered by that closing date."""
     by_year: dict[int, list[SubmissionBox]] = {}
 
     for conf in conferences:
@@ -257,12 +286,11 @@ def build_submission_boxes(conferences: list[Conference]) -> dict[int, list[Subm
             if entry is None or outcome is None:
                 continue
 
-            conference_start = entry.conference_start
-            if conference_start is None and conf.presumed:
-                conference_start = conf.presumed.build_conference_start(year)
-            sort_date = conference_start or entry.cfp_close or date(year, 12, 31)
+            close_date = submission_close_date(conf, year, entry)
+            sort_date = close_date or date(year, 12, 31)
+            submitted_in = close_date.year if close_date else year
 
-            by_year.setdefault(year, []).append(
+            by_year.setdefault(submitted_in, []).append(
                 SubmissionBox(
                     conf=conf,
                     year=year,

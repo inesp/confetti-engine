@@ -1,13 +1,13 @@
 from datetime import date
 
-from confetti.models import Conference, TalkEntry, TalkStatus, YearEntry
+from confetti.models import Cfp, Conference, TalkEntry, TalkStatus, YearEntry
 from confetti.views.conf_stats import build_conf_summaries
 from confetti.views.conf_stats import build_submission_boxes
 from confetti.views.conf_stats import conf_acceptance_by_year
 from confetti.views.conf_stats import edition_outcome
 
 
-def _conf(name: str, years: dict[int, YearEntry]) -> Conference:
+def _conf(name: str, years: dict[int, YearEntry], cfp: Cfp | None = None) -> Conference:
     return Conference(
         filename="test.yaml",
         name=name,
@@ -15,7 +15,12 @@ def _conf(name: str, years: dict[int, YearEntry]) -> Conference:
         country="Netherlands",
         website="https://example.com",
         years=years,
+        cfp=cfp,
     )
+
+
+def _cfp(presumed_close: str) -> Cfp:
+    return Cfp(url=None, site=None, formats=None, notes=None, presumed_open=None, presumed_close=presumed_close)
 
 
 def _year(*statuses: TalkStatus) -> YearEntry:
@@ -117,7 +122,47 @@ def test_edition_outcome_waiting_beats_decided():
     assert result == TalkStatus.submitted
 
 
-def test_submission_boxes_grouped_by_year_and_ordered_by_date():
+def test_submission_boxes_use_the_factual_cfp_close_year():
+    confs = [
+        _conf(
+            "Conf",
+            {
+                2026: YearEntry(
+                    conference_start=date(2026, 3, 1), cfp_close=date(2025, 10, 1), talks=[TalkEntry(talk="a")]
+                )
+            },
+        )
+    ]
+    result = build_submission_boxes(confs)
+    assert {year: [box.name for box in boxes] for year, boxes in result.items()} == {2025: ["Conf"]}
+
+
+def test_submission_boxes_fall_back_to_the_presumed_cfp_close():
+    confs = [
+        _conf(
+            "Conf",
+            {2026: YearEntry(conference_start=date(2026, 11, 1), talks=[TalkEntry(talk="a")])},
+            cfp=_cfp("06-30"),
+        )
+    ]
+    result = build_submission_boxes(confs)
+    assert {year: [box.name for box in boxes] for year, boxes in result.items()} == {2026: ["Conf"]}
+
+
+def test_presumed_close_after_the_conference_belongs_to_the_year_before():
+    confs = [
+        _conf(
+            "Conf",
+            {2026: YearEntry(conference_start=date(2026, 3, 1), talks=[TalkEntry(talk="a")])},
+            cfp=_cfp("10-01"),
+        )
+    ]
+    result = build_submission_boxes(confs)
+    assert {year: [box.name for box in boxes] for year, boxes in result.items()} == {2025: ["Conf"]}
+
+
+def test_submission_boxes_guess_120_days_before_the_conference():
+    """No dates at all: a CFP is assumed to open 180 days out and run 60, so it closed 120 days out."""
     confs = [
         _conf("Late", {2026: YearEntry(conference_start=date(2026, 11, 1), talks=[TalkEntry(talk="a")])}),
         _conf("Early", {2026: YearEntry(conference_start=date(2026, 3, 1), talks=[TalkEntry(talk="b")])}),
@@ -125,6 +170,6 @@ def test_submission_boxes_grouped_by_year_and_ordered_by_date():
     ]
     result = build_submission_boxes(confs)
     assert {year: [box.name for box in boxes] for year, boxes in result.items()} == {
-        2026: ["Early", "Late"],
-        2025: ["Older"],
+        2026: ["Late"],
+        2025: ["Older", "Early"],
     }
