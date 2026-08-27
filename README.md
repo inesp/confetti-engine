@@ -29,6 +29,10 @@ The past page: what each trip cost, how many vacation days it burned, and the ac
 
 ![Past conferences and talk stats](docs/imgs/past-talks.png)
 
+Further down: every submission grouped by the year its CFP closed, and one pill per conference washing from the years it rejected you, through the ones you withdrew from, into the ones that said yes.
+
+![Submissions and conference acceptance rate](docs/imgs/success_rates.png)
+
 Scouting: checks every conference for updated dates and tells you why it skipped the rest.
 
 ![Scouting for CFP dates](docs/imgs/scouting.png)
