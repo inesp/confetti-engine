@@ -1,4 +1,4 @@
-# budget: partial, difficulty: moderate, talk withdrawn, money still owed.
+# budget: partial, difficulty: moderate. Accepted in 2025, withdrawn in 2026, money still owed.
 - name: "Sundown JS Days"
   city: "Barcelona"
   country: "Spain"
@@ -22,6 +22,25 @@
     conference_end: "11-07"
 
   years:
+    2025:
+      cfp_open: 2025-06-01
+      cfp_close: 2025-07-31
+      notify: "Notified 18 Aug"
+      conference_start: 2025-11-06
+      conference_end: 2025-11-07
+      cost:
+        flight: 105
+        hotel: 210
+        extra: 55
+        promised: 300
+        covered: 300
+      vacation_days: 1
+      talks:
+        - talk: example-refactoring
+          status: accepted
+          title: "Example Talk: Refactoring"
+          talk_start: 2025-11-06 16:00
+          talk_duration: 30
     2026:
       cfp_open: 2026-06-02
       cfp_close: 2026-07-30

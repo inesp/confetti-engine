@@ -1,4 +1,4 @@
-# budget: full, difficulty: moderate, past edition, talk accepted, costs fully covered.
+# budget: full, difficulty: moderate. Rejected in 2025, accepted in 2026 with costs fully covered.
 - name: "Fauxcon"
   city: "Lisbon"
   country: "Portugal"
@@ -22,6 +22,16 @@
     conference_end: "05-16"
 
   years:
+    2025:
+      cfp_open: 2025-01-10
+      cfp_close: 2025-02-28
+      notify: "Notified 21 Mar"
+      conference_start: 2025-05-14
+      conference_end: 2025-05-16
+      talks:
+        - talk: example-refactoring
+          status: rejected
+          title: "Example Talk: Refactoring"
     2026:
       cfp_open: 2026-01-08
       cfp_close: 2026-02-25

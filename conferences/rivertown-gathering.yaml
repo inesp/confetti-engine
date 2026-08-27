@@ -1,4 +1,4 @@
-# budget: none, difficulty: longshot, talk rejected.
+# budget: none, difficulty: longshot. Accepted 2024 and 2025, rejected 2026: a mostly-green pill on /past.
 - name: "Rivertown Code Gathering"
   city: "Rivertown"
   country: "Ireland"
@@ -22,6 +22,40 @@
     conference_end: "10-05"
 
   years:
+    2024:
+      cfp_open: 2024-05-01
+      cfp_close: 2024-06-15
+      notify: "Notified 3 Aug"
+      conference_start: 2024-10-05
+      conference_end: 2024-10-05
+      cost:
+        flight: 90
+        hotel: 135
+        extra: 35
+      vacation_days: 1
+      talks:
+        - talk: example-refactoring
+          status: accepted
+          title: "Example Talk: Refactoring"
+          talk_start: 2024-10-05 11:00
+          talk_duration: 40
+    2025:
+      cfp_open: 2025-05-01
+      cfp_close: 2025-06-15
+      notify: "Notified 1 Aug"
+      conference_start: 2025-10-05
+      conference_end: 2025-10-05
+      cost:
+        flight: 95
+        hotel: 140
+        extra: 40
+      vacation_days: 1
+      talks:
+        - talk: example-testing
+          status: accepted
+          title: "Example Talk: Testing"
+          talk_start: 2025-10-05 15:30
+          talk_duration: 40
     2026:
       cfp_open: 2026-05-01
       cfp_close: 2026-06-15

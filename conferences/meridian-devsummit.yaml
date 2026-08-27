@@ -1,5 +1,5 @@
 # A conference series with several city editions lives in one file as a list.
-# Amsterdam: budget full, difficulty moderate, talk waitlisted.
+# Amsterdam: budget full, difficulty moderate. Accepted 2025, waitlisted 2026.
 # Vienna:    budget ask, difficulty easy, presumed-only (no year entries yet).
 - name: "Meridian Dev Summit Amsterdam"
   city: "Amsterdam"
@@ -24,6 +24,25 @@
     conference_end: "06-12"
 
   years:
+    2025:
+      cfp_open: 2025-02-01
+      cfp_close: 2025-03-31
+      notify: "Notified 24 Apr"
+      conference_start: 2025-06-11
+      conference_end: 2025-06-12
+      cost:
+        flight: 140
+        hotel: 280
+        extra: 60
+        promised: 480
+        covered: 480
+      vacation_days: 1
+      talks:
+        - talk: example-async
+          status: accepted
+          title: "Example Talk: Async Things"
+          talk_start: 2025-06-11 13:30
+          talk_duration: 45
     2026:
       cfp_open: 2026-02-03
       cfp_close: 2026-03-30

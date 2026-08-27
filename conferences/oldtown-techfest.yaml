@@ -1,5 +1,6 @@
-# Two tracked editions (2025 and 2026). 2025 done and paid; 2026 has two talks
-# with different outcomes. budget full, difficulty hard.
+# Four tracked editions (2023-2026), one of each outcome: 2023 withdrawn, 2024 rejected,
+# 2025 and 2026 accepted. The mixed record is what paints a three-colour pill on /past.
+# 2025 done and paid; 2026 has two talks with different outcomes. budget full, difficulty hard.
 - name: "Old Town Tech Fest"
   city: "Prague"
   country: "Czechia"
@@ -23,6 +24,26 @@
     conference_end: "09-19"
 
   years:
+    2023:
+      cfp_open: 2023-03-15
+      cfp_close: 2023-05-01
+      notify: "Notified 2 Jun"
+      conference_start: 2023-09-18
+      conference_end: 2023-09-19
+      talks:
+        - talk: example-keynote
+          status: withdrawn
+          title: "Example Talk: A Sample Keynote"
+    2024:
+      cfp_open: 2024-03-15
+      cfp_close: 2024-05-01
+      notify: "Notified 5 Jun"
+      conference_start: 2024-09-18
+      conference_end: 2024-09-19
+      talks:
+        - talk: example-observability
+          status: rejected
+          title: "Example Talk: Observability"
     2025:
       cfp_open: 2025-03-14
       cfp_close: 2025-04-30
