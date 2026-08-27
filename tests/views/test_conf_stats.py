@@ -122,6 +122,24 @@ def test_edition_outcome_waiting_beats_decided():
     assert result == TalkStatus.submitted
 
 
+def test_submission_box_lists_only_the_accepted_talk():
+    entry = _year(TalkStatus.rejected, TalkStatus.accepted, TalkStatus.submitted)
+    result = build_submission_boxes([_conf("Conf", {2026: entry})])
+    assert [box.talks for boxes in result.values() for box in boxes] == [["Talk 1"]]
+
+
+def test_submission_box_lists_only_the_withdrawn_talk():
+    entry = _year(TalkStatus.rejected, TalkStatus.withdrawn)
+    result = build_submission_boxes([_conf("Conf", {2026: entry})])
+    assert [box.talks for boxes in result.values() for box in boxes] == [["Talk 1"]]
+
+
+def test_submission_box_lists_every_rejection_including_sidelined():
+    entry = _year(TalkStatus.rejected, TalkStatus.sidelined)
+    result = build_submission_boxes([_conf("Conf", {2026: entry})])
+    assert [box.talks for boxes in result.values() for box in boxes] == [["Talk 0", "Talk 1"]]
+
+
 def test_submission_boxes_use_the_factual_cfp_close_year():
     confs = [
         _conf(

@@ -249,6 +249,15 @@ class SubmissionBox:
         return self.conf.country_code
 
 
+def outcome_talks(entry: YearEntry, outcome: TalkStatus) -> list[str]:
+    """Only the talks that produced the edition's outcome: the accepted one, the withdrawn one, or every rejection.
+
+    Sidelined talks ride along with the rejected ones, the same way edition_outcome counts them.
+    """
+    wanted = {outcome, TalkStatus.sidelined} if outcome == TalkStatus.rejected else {outcome}
+    return [talk.title or talk.talk for talk in entry.talks if talk.status in wanted]
+
+
 def submission_close_date(conf: Conference, year: int, entry: YearEntry) -> date | None:
     """When the CFP I submitted to closed, falling back the same way Conference._resolve_next_cfp does.
 
@@ -295,7 +304,7 @@ def build_submission_boxes(conferences: list[Conference]) -> dict[int, list[Subm
                     conf=conf,
                     year=year,
                     status=outcome,
-                    talks=[talk.title or talk.talk for talk in entry.talks],
+                    talks=outcome_talks(entry, outcome),
                     sort_date=sort_date,
                 )
             )
