@@ -74,6 +74,7 @@ class SubmissionBox:
     talks: list[str]
     cfp_close: date
     cfp_year: int
+    cfp_close_is_factual: bool
 
     @property
     def name(self) -> str:
@@ -86,6 +87,11 @@ class SubmissionBox:
     @property
     def decided(self) -> bool:
         return self.status != TalkStatus.submitted
+
+    @property
+    def cfp_close_label(self) -> str:
+        """The deadline, with a ~ in front when it is the fallback guess rather than a date they published."""
+        return f"{self.cfp_close:%d %b %Y}" if self.cfp_close_is_factual else f"~{self.cfp_close:%d %b %Y}"
 
 
 def build_submissions(conferences: list[Conference]) -> list[SubmissionBox]:
@@ -107,6 +113,7 @@ def build_submissions(conferences: list[Conference]) -> list[SubmissionBox]:
                     talks=outcome_talks(entry, outcome),
                     cfp_close=close_date,
                     cfp_year=close_date.year,
+                    cfp_close_is_factual=entry.cfp_close is not None,
                 )
             )
 

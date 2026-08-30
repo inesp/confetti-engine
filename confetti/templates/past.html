@@ -284,7 +284,7 @@
                 </span>
               </div>
               <div class="{{ status_colour(box.status) }} font-medium mt-1">{{ box.status }}</div>
-              <div class="text-gray-400 mt-1">CFP closed {{ box.cfp_close.strftime('%d %b %Y') }}</div>
+              <div class="text-gray-400 mt-1">CFP closed {{ box.cfp_close_label }}</div>
               <div class="mt-2 pt-2 border-t border-gray-100 text-gray-700">
                 {% for talk in box.talks %}
                 <div>{{ talk }}</div>
