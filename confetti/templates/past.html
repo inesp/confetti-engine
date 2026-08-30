@@ -3,20 +3,6 @@
 {% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
 {% from "components/money.html" import money %}
 
-{% macro year_outcomes(label, icon, colour, outcomes) %}
-{% if outcomes %}
-<div>
-  <div class="{{ colour }} font-semibold mb-1">{{ icon }} {{ label }} ({{ outcomes|length }})</div>
-  {% for outcome in outcomes %}
-  <div class="text-gray-700">
-    {{ outcome.name }}&nbsp;<span class="text-gray-400">{{ outcome.country_code }}</span>
-    {% if outcome.talks %}<span class="text-gray-400">· {{ outcome.talks | join(', ') }}</span>{% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-{% endmacro %}
-
 {% macro box_colour(status) %}
 {%- if status == 'accepted' -%}bg-green-500 border-green-600
 {%- elif status == 'rejected' -%}bg-red-400 border-red-500
@@ -266,33 +252,39 @@
   </div>
 </div>
 
-<!-- Submissions -->
+<!-- Submissions: one pile of submissions, sliced by year and by conference -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-  <div class="flex items-center justify-between mb-4">
+  <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold text-gray-900">Submissions</h3>
-    <div class="flex flex-wrap items-center gap-4 text-gray-500">
-      {% for label, status in [('Accepted', 'accepted'), ('Rejected', 'rejected'), ('Withdrawn', 'withdrawn'), ('Waitlisted', 'waitlisted'), ('Waiting', 'submitted')] %}
-      <span class="inline-flex items-center gap-1.5">
-        <span class="w-4 h-4 rounded border {{ box_colour(status) }}"></span>{{ label }}
-      </span>
-      {% endfor %}
-    </div>
+    <span class="font-bold text-gray-700">{{ submissions_total.accepted }}/{{ submissions_total.total }} conferences ({{ submissions_total.rate }}%) · {{ submissions_total.accepted }}/{{ submissions_total.total_no_withdrawn }} without withdrawn ({{ submissions_total.rate_no_withdrawn }}%)</span>
   </div>
 
-  <div class="space-y-2">
-    {% for year, boxes in submission_years.items() %}
+  <div class="flex flex-wrap items-center gap-4 text-gray-500 mt-2">
+    {% for label, status in [('Accepted', 'accepted'), ('Rejected', 'rejected'), ('Withdrawn', 'withdrawn'), ('Waitlisted', 'waitlisted'), ('Waiting', 'submitted')] %}
+    <span class="inline-flex items-center gap-1.5">
+      <span class="w-4 h-4 rounded border {{ box_colour(status) }}"></span>{{ label }}
+    </span>
+    {% endfor %}
+  </div>
+
+  <div class="mt-5 space-y-3">
+    {% for year_subs in submission_years %}
     <div class="flex items-start gap-3">
-      <span class="w-12 font-semibold text-gray-900 tabular-nums leading-7">{{ year }}</span>
-      <div class="flex flex-wrap gap-1.5">
-        {% for box in boxes %}
+      <span class="w-12 font-semibold text-gray-900 tabular-nums leading-7">{{ year_subs.year }}</span>
+      <div class="flex flex-wrap gap-1.5 flex-grow">
+        {% for box in year_subs.boxes %}
         <div class="relative w-7 h-7 rounded border {{ box_colour(box.status) }} cursor-default">
           {% call hover_popup(position="above") %}
             <div class="bg-white rounded-xl shadow-2xl border border-gray-200 w-[360px] p-4">
               <div class="flex items-baseline justify-between gap-3">
                 <a href="{{ box.conf.website }}" target="_blank" class="text-blue-500 hover:underline font-semibold">{{ box.name }}</a>
-                <span class="text-gray-400">{{ box.country_code }} · {{ box.year }}</span>
+                <span class="flex items-baseline gap-3 flex-shrink-0">
+                  <span class="text-gray-400">{{ box.country_code }} · {{ box.year }}</span>
+                  <a href="{{ url_for('conferences.detail', conf_name=box.conf.name) }}" class="text-blue-500 hover:underline">Details &#9998;</a>
+                </span>
               </div>
               <div class="{{ status_colour(box.status) }} font-medium mt-1">{{ box.status }}</div>
+              <div class="text-gray-400 mt-1">CFP closed {{ box.cfp_close.strftime('%d %b %Y') }}</div>
               <div class="mt-2 pt-2 border-t border-gray-100 text-gray-700">
                 {% for talk in box.talks %}
                 <div>{{ talk }}</div>
@@ -303,41 +295,12 @@
         </div>
         {% endfor %}
       </div>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-
-<!-- Conference acceptance rate -->
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-  <div class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-gray-900">Conference acceptance rate</h3>
-    <span class="font-bold text-gray-700">{{ conf_accepted }}/{{ conf_total }} conferences ({{ conf_rate }}%) · {{ conf_accepted }}/{{ conf_total_no_withdrawn }} without withdrawn ({{ conf_rate_no_withdrawn }}%)</span>
-  </div>
-  <div class="w-full bg-gray-100 rounded-full h-2 mt-3">
-    <div class="h-2 rounded-full bg-sky-400" style="width: {{ conf_rate }}%"></div>
-  </div>
-
-  <div class="mt-5 space-y-2">
-    {% for ya in conf_year_rates %}
-    <div class="relative flex items-center gap-3 cursor-default">
-      <span class="w-12 font-semibold text-gray-900 tabular-nums">{{ ya.year }}</span>
-      <div class="flex-grow bg-gray-100 rounded-full h-2">
-        <div class="h-2 rounded-full bg-sky-400" style="width: {{ ya.rate }}%"></div>
-      </div>
-      <span class="text-gray-500 tabular-nums whitespace-nowrap">{{ ya.accepted }}/{{ ya.total }} ({{ ya.rate }}%){% if ya.total_no_withdrawn != ya.total %} · {{ ya.accepted }}/{{ ya.total_no_withdrawn }} without withdrawn ({{ ya.rate_no_withdrawn }}%){% endif %}</span>
-      {% call hover_popup(position="above") %}
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 w-[420px] p-5 space-y-4">
-          {{ year_outcomes("Accepted", "✅", "text-green-600", ya.accepted_confs) }}
-          {{ year_outcomes("Rejected", "❌", "text-red-500", ya.rejected_confs) }}
-          {{ year_outcomes("Withdrawn", "↩️", "text-orange-500", ya.withdrawn_confs) }}
-        </div>
-      {% endcall %}
+      <span class="text-gray-500 tabular-nums whitespace-nowrap leading-7">{{ year_subs.accepted }}/{{ year_subs.total }} ({{ year_subs.rate }}%){% if year_subs.total_no_withdrawn != year_subs.total %} · {{ year_subs.accepted }}/{{ year_subs.total_no_withdrawn }} without withdrawn ({{ year_subs.rate_no_withdrawn }}%){% endif %}{% if year_subs.waiting %} · {{ year_subs.waiting }} waiting{% endif %}</span>
     </div>
     {% endfor %}
   </div>
 
-  <div class="flex flex-wrap gap-2 mt-4">
+  <div class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-gray-100">
     {% for cs in conf_summaries %}
     <span class="relative group cursor-default">
       <div class="relative inline-flex items-center px-3 py-1.5 rounded-full text-gray-700 {{ cs.pill_border }}"
