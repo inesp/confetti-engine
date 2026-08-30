@@ -34,8 +34,7 @@ def test_save_talk_stats_writes_summary_table(tmp_path, monkeypatch):
     save_talk_stats(confs, talks)
 
     result = (tmp_path / "talk_stats.md").read_text()
-    assert "| Estimation | 1 | 2 | 0 | 0 | 33% |" in result
-    assert "| Biases | 1 | 0 | 0 | 0 | 100% |" in result
+    assert "| Estimation | 1        | 2        | 0         | 0         | 33%  |" in result
 
 
 def test_save_talk_stats_includes_submission_history(tmp_path, monkeypatch):
@@ -62,4 +61,35 @@ def test_save_talk_stats_pending_and_withdrawn(tmp_path, monkeypatch):
     save_talk_stats(confs, talks)
 
     result = (tmp_path / "talk_stats.md").read_text()
-    assert "| Talk A | 0 | 0 | 0 | 1 | - |" in result
+    assert "| Talk A | 0        | 0        | 0         | 1         | -    |" in result
+
+
+def test_save_talk_stats_ends_with_the_yearly_submission_stats(tmp_path, monkeypatch):
+    """The same numbers the Submissions section of /past shows, sliced by the year the CFP closed."""
+    monkeypatch.setattr("confetti.views.talk_stats.TALK_STATS_FILE", tmp_path / "talk_stats.md")
+
+    confs = [
+        _conf("Conf A", {2026: _year(("talk-a", TalkStatus.accepted))}),
+        _conf("Conf B", {2026: _year(("talk-a", TalkStatus.withdrawn))}),
+        _conf("Conf C", {2026: _year(("talk-a", TalkStatus.rejected))}),
+    ]
+    talks = [Talk(id="talk-a", title="Talk A")]
+
+    save_talk_stats(confs, talks)
+
+    result = (tmp_path / "talk_stats.md").read_text()
+    assert result.endswith("""## Conference submissions per year
+
+The year is the one the CFP closed in - when I did the submitting, not when the conference happened.
+A waitlist counts as a rejection; anything still waiting for an answer counts as nothing at all.
+
+| Year | Accepted | Rejected | Withdrawn | Waiting | Rate      | Without withdrawn |
+|------|----------|----------|-----------|---------|-----------|-------------------|
+| 2026 | 1        | 1        | 1         | 0       | 1/3 (33%) | 1/2 (50%)         |
+| All  | 1        | 1        | 1         | 0       | 1/3 (33%) | 1/2 (50%)         |
+
+### 2026
+- Conf A 2026: accepted (CFP closed ~31 Dec 2026) - Title talk-a
+- Conf B 2026: withdrawn (CFP closed ~31 Dec 2026) - Title talk-a
+- Conf C 2026: rejected (CFP closed ~31 Dec 2026) - Title talk-a
+""")
