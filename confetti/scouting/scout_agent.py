@@ -20,6 +20,8 @@ from confetti.yaml.yaml_updater import update_conf_dates
 # Re-export for use by routes
 stop_scouting = stop
 
+_DATE_FIELDS = ["cfp_open", "cfp_close", "conference_start", "conference_end"]
+
 
 def scout_conferences(confs: list[Conference]) -> list[ScoutResult]:
     if not confs:
@@ -89,25 +91,29 @@ def _parse_output(confs: list[Conference], raw: str) -> list[ScoutResult]:
         if not conf:
             continue
 
-        dates = {
-            "cfp_open": entry.get("cfp_open"),
-            "cfp_close": entry.get("cfp_close"),
-            "conference_start": entry.get("conference_start"),
-            "conference_end": entry.get("conference_end"),
-        }
-
-        notify = entry.get("notify")
-
-        found = [f"{k}: {v}" for k, v in dates.items() if v]
-        if notify:
-            found.append(f"notify: {notify}")
-        not_found = [k for k, v in dates.items() if not v]
+        dates = {field: entry.get(field) for field in _DATE_FIELDS}
+        notify = entry.get("notify") or None
+        edition_year = _edition_year(conf)
+        parsed_dates = {field: _parse_date(value) for field, value in dates.items()}
 
         parts = []
-        if found:
-            parts.append("Found: " + ", ".join(found))
-        if not_found:
-            parts.append("Not found: " + ", ".join(not_found))
+        mismatch = _edition_mismatch(parsed_dates, edition_year)
+        if mismatch:
+            parts.append(f"Nothing written: {mismatch}, looks like another edition")
+        else:
+            written = _apply_dates(conf, edition_year, parsed_dates, notify)
+            found = [(field, value.isoformat()) for field, value in parsed_dates.items() if value]
+            if notify:
+                found.append(("notify", notify))
+            written_parts = [f"{field}: {value}" for field, value in found if field in written]
+            already_set = [f"{field}: {value}" for field, value in found if field not in written]
+            not_found = [field for field, value in parsed_dates.items() if not value]
+            if written_parts:
+                parts.append("Written: " + ", ".join(written_parts))
+            if already_set:
+                parts.append("Already set: " + ", ".join(already_set))
+            if not_found:
+                parts.append("Not found: " + ", ".join(not_found))
         source = entry.get("source")
         if source:
             parts.append(f"Source: {source}")
@@ -116,8 +122,6 @@ def _parse_output(confs: list[Conference], raw: str) -> list[ScoutResult]:
             parts.append(f"Notes: {notes}")
 
         outcome = "\n".join(parts) if parts else "No dates found"
-
-        _apply_dates(conf, dates, notify)
 
         results.append(
             ScoutResult(
@@ -136,38 +140,59 @@ def _parse_output(confs: list[Conference], raw: str) -> list[ScoutResult]:
     return results
 
 
-def _apply_dates(conf: Conference, found_dates: dict, notify: str | None = None) -> None:
-    def _parse(key: str) -> date | None:
-        value = found_dates.get(key)
-        if not value:
-            return None
-        try:
-            return date.fromisoformat(value)
-        except ValueError:
-            return None
+def _edition_year(conf: Conference) -> int:
+    """The edition to scout: the next one, which is next year's once this year's conference is over."""
+    return conf.next_event.edition_year or date.today().year
 
-    year = date.today().year
-    update_conf_dates(
+
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _edition_mismatch(dates: dict[str, date | None], edition_year: int) -> str | None:
+    """Explain why these dates can't belong to the edition we asked for, or None if they can.
+
+    Sites often still show the edition that just happened. The conference runs in the edition's year,
+    its CFP in that year or the one before.
+    """
+    conference_start = dates["conference_start"]
+    if conference_start and conference_start.year != edition_year:
+        return f"conference_start {conference_start} is not in {edition_year}"
+    for field in ("cfp_open", "cfp_close"):
+        value = dates[field]
+        if value and value.year not in (edition_year - 1, edition_year):
+            return f"{field} {value} is too far from {edition_year}"
+    return None
+
+
+def _apply_dates(conf: Conference, edition_year: int, dates: dict[str, date | None], notify: str | None) -> list[str]:
+    written = update_conf_dates(
         conf,
-        year,
-        cfp_open=_parse("cfp_open"),
-        cfp_close=_parse("cfp_close"),
-        conference_start=_parse("conference_start"),
-        conference_end=_parse("conference_end"),
-        notify=notify or None,
+        edition_year,
+        cfp_open=dates["cfp_open"],
+        cfp_close=dates["cfp_close"],
+        conference_start=dates["conference_start"],
+        conference_end=dates["conference_end"],
+        notify=notify,
     )
-    fill_dates_with_guesses(conf, year)
+    fill_dates_with_guesses(conf, edition_year)
+    return written
 
 
 def _build_prompt(confs: list[Conference]) -> str:
     today = date.today()
-    current_year = today.year
 
     conf_sections = []
     for conf in confs:
+        edition_year = _edition_year(conf)
         missing = []
         known = []
-        year_entry = conf.years.get(current_year)
+        year_entry = conf.years.get(edition_year)
         for field in ["cfp_open", "cfp_close", "conference_start", "conference_end", "notify"]:
             value = getattr(year_entry, field, None) if year_entry else None
             if value:
@@ -175,7 +200,7 @@ def _build_prompt(confs: list[Conference]) -> str:
             else:
                 missing.append(field)
 
-        section = f"- {conf.name} ({conf.city}, {conf.country})\n"
+        section = f"- {conf.name} ({conf.city}, {conf.country}), {edition_year} edition\n"
         section += f"  Website: {conf.website}\n"
         if conf.cfp and conf.cfp.url:
             section += f"  CFP URL: {conf.cfp.url}\n"
@@ -184,7 +209,10 @@ def _build_prompt(confs: list[Conference]) -> str:
         section += f"  Missing: {', '.join(missing)}\n"
         conf_sections.append(section)
 
-    return f"""Find missing {current_year} dates for these conferences. Today is {today.isoformat()}.
+    return f"""Find missing dates for these conferences. Today is {today.isoformat()}.
+
+Each conference below names the edition to look for. Websites and CFP links often still show the edition that
+already happened; its dates don't count. Set them to null.
 
 For each conference, visit its website and find: cfp_open, cfp_close, conference_start, conference_end dates.
 Only report dates you actually find on the website. Don't guess. Set unfound dates to null.

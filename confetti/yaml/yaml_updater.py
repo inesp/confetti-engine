@@ -97,8 +97,8 @@ def update_conf_dates(
     conference_start: date | None = None,
     conference_end: date | None = None,
     notify: str | None = None,
-) -> None:
-    """Update actual dates for a conference year. Only sets missing fields."""
+) -> list[str]:
+    """Update actual dates for a conference year. Only sets missing fields and returns the ones it set."""
     dates = {
         "cfp_open": cfp_open,
         "cfp_close": cfp_close,
@@ -108,14 +108,17 @@ def update_conf_dates(
     }
     dates = {field: value for field, value in dates.items() if value is not None}
     if not dates:
-        return
+        return []
 
+    written: list[str] = []
     with _edit_year(conf, year) as year_data:
         if year_data is None:
-            return
+            return []
         for field, value in dates.items():
             if field not in year_data or year_data[field] is None:
                 year_data[field] = value
+                written.append(field)
+    return written
 
 
 def update_cfp_url(conf: Conference, url: str | None) -> None:
