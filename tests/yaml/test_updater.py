@@ -5,6 +5,7 @@ import yaml
 from confetti.models import Conference
 from confetti.yaml.yaml_updater import (
     add_talk,
+    update_attendees,
     update_cfp_url,
     update_cfp_window,
     update_difficulty,
@@ -76,6 +77,19 @@ def test_update_favorite_lands_after_website(tmp_path, monkeypatch):
     update_favorite(conf, True)
     keys = list(_reload(tmp_path).keys())
     assert keys[keys.index("website") + 1] == "favorite"
+
+
+def test_update_attendees_lands_after_website(tmp_path, monkeypatch):
+    conf = _conf(tmp_path, monkeypatch)
+    update_attendees(conf, 1200)
+    result = list(_reload(tmp_path).items())[:5]
+    assert result == [
+        ("name", "Conf"),
+        ("city", "Test"),
+        ("country", "Netherlands"),
+        ("website", "https://example.com"),
+        ("attendees", 1200),
+    ]
 
 
 def test_update_favorite_clears_flag(tmp_path, monkeypatch):

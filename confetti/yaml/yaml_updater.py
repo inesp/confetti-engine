@@ -142,6 +142,17 @@ def update_favorite(conf: Conference, favorite: bool) -> None:
             entry.pop("favorite", None)
 
 
+def update_attendees(conf: Conference, attendees: int | None) -> None:
+    """Set (or clear) how many people attend the conference."""
+    with _edit_conf(conf) as entry:
+        if entry is None:
+            return
+        if attendees is None:
+            entry.pop("attendees", None)
+        else:
+            _set_after(entry, "attendees", attendees, after="website")
+
+
 def update_difficulty(conf: Conference, difficulty: str | None) -> None:
     """Set (or clear) the conference's longshot marker (stored in `difficulty`)."""
     with _edit_conf(conf) as entry:

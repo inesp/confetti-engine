@@ -10,6 +10,7 @@ from pydantic import Field
 
 from confetti.constants import CFP_BEFORE_CONFERENCE
 from confetti.constants import CFP_ESTIMATED_DURATION
+from confetti.constants import CONFERENCE_SIZE_STEPS
 from confetti.constants import CONFERENCES_DIR
 from confetti.date_utils import parse_month_day
 
@@ -216,6 +217,7 @@ class Conference(BaseModel):
     presumed: Presumed = Field(default_factory=Presumed)
     budget: Budget | None = None
     difficulty: Difficulty | None = None
+    attendees: int | None = None
     topic_fit: str | None = None
     lang: str | None = None
     notes: str | None = None
@@ -243,6 +245,13 @@ class Conference(BaseModel):
     @property
     def filepath(self) -> Path:
         return CONFERENCES_DIR / self.filename
+
+    @property
+    def size_step(self) -> int | None:
+        """How many little people to draw next to the name, 1 to 4, or None when the size is unknown."""
+        if self.attendees is None:
+            return None
+        return 1 + sum(self.attendees >= threshold for threshold in CONFERENCE_SIZE_STEPS)
 
     @property
     def country_code(self) -> str:

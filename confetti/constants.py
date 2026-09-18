@@ -36,3 +36,5 @@ BEFORE_CFP_OPEN = timedelta(days=2)
 BEFORE_CONFERENCE_SCOUT = timedelta(days=180)
 CFP_ESTIMATED_DURATION = timedelta(days=60)
 CFP_BEFORE_CONFERENCE = timedelta(days=180)
+# Attendee counts where the next little person appears: small, medium, large, huge.
+CONFERENCE_SIZE_STEPS = (400, 1000, 2500)

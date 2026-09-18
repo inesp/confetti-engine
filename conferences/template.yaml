@@ -5,7 +5,7 @@
 # Each file is a list (even if it has just one conference).
 #
 # Required fields: name, city, country, website
-# Optional fields: cfp, presumed, budget, topic_fit, notes, years
+# Optional fields: attendees, cfp, presumed, budget, topic_fit, notes, years
 # Year entries can have: cfp_open, cfp_close, notify, conference_start, conference_end, talks, cost
 # cfp has: url, site (sessionize/own/...), formats, notes, presumed_open, presumed_close
 # ============================================================
@@ -14,6 +14,7 @@
   city: "City"                     # required
   country: "Country"               # required
   website: "https://example.com"    # required — full URL
+  attendees: 800                   # optional — in-person attendees, drives the size icon
 
   cfp:
     url: "https://sessionize.com/example"
