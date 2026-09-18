@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/difficulty.html" import difficulty_icon, favorite_star %}
+{% from "components/difficulty.html" import difficulty_icon, favorite_star, size_icon %}
 {% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
 {% from "components/conf_meta.html" import conf_meta %}
 {% from "components/talk_status_select.html" import talk_status_select %}
@@ -11,12 +11,13 @@
   <h3 class="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
   <div class="flex">
     <!-- Label column -->
-    <div class="w-56 flex-shrink-0 relative z-10 bg-white" style="padding-top: 20px;">
+    <div class="w-64 flex-shrink-0 relative z-10 bg-white" style="padding-top: 20px;">
       {% for bar in gantt_bars %}
       <div class="flex items-center gap-1.5 pr-3 relative group/glabel" style="height: 32px;">
         {{ favorite_star(bar.conf) }}
         {{ difficulty_icon(bar.conf.difficulty, 14) }}
         <span class="text-gray-800 font-medium truncate cursor-default" style="font-size: 13px">{{ bar.conf.name }}</span>
+        {{ size_icon(bar.conf, 13) }}
         <span class="text-gray-400 flex-shrink-0" style="font-size: 12px">{{ bar.conf_start.strftime('%d %b') }}–{{ bar.conf_end.strftime('%d %b') }}</span>
         {% call hover_popup(position="below", align="left", group_name="group/glabel", z="z-30") %}
           {{ conf_tooltip(bar.conf, bar.conf_start, bar.conf_end, today) }}
@@ -73,12 +74,13 @@
   </div>
   <div class="flex">
     <!-- Label column -->
-    <div class="w-56 flex-shrink-0 relative z-10 bg-white" style="padding-top: 20px;">
+    <div class="w-64 flex-shrink-0 relative z-10 bg-white" style="padding-top: 20px;">
       {% for bar in cfp_bars %}
       <div class="flex items-center gap-1.5 pr-3 relative group/clabel" style="height: 32px;">
         {{ favorite_star(bar.conf) }}
         {{ difficulty_icon(bar.conf.difficulty, 14) }}
         <span class="text-gray-800 font-medium truncate cursor-default" style="font-size: 13px">{{ bar.conf.name }}</span>
+        {{ size_icon(bar.conf, 13) }}
         <span class="text-gray-400 flex-shrink-0" style="font-size: 12px">{{ bar.cfp_open.strftime('%d %b') }}–{{ bar.cfp_close.strftime('%d %b') }}</span>
         {% call hover_popup(position="below", align="left", group_name="group/clabel", z="z-30") %}
           {{ conf_tooltip(bar.conf, today=today) }}
@@ -139,7 +141,7 @@
       <div class="space-y-2">
         {% for t in kanban.waiting %}
           <div class="bg-gray-50 rounded p-2 border border-gray-200 relative group">
-            <p class="text-sm font-medium text-gray-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
+            <p class="text-sm font-medium text-gray-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ size_icon(t.conf) }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
             <p class="text-xs text-gray-500 mt-1">{{ t.action }}</p>
             {% call hover_popup() %}
               {{ conf_tooltip(t.conf, t.conf_start, t.conf_end, today) }}
@@ -155,7 +157,7 @@
       <div class="space-y-2">
         {% for t in kanban.cfp_open %}
           <div class="bg-blue-50 rounded p-2 border border-blue-200 relative group">
-            <p class="text-sm font-medium text-blue-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
+            <p class="text-sm font-medium text-blue-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ size_icon(t.conf) }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
             <p class="text-xs text-blue-500 mt-1">{{ t.action }}</p>
             {% call hover_popup() %}
               {{ conf_tooltip(t.conf, t.conf_start, t.conf_end, today) }}
@@ -172,7 +174,7 @@
         {% for t in kanban.submitted %}
           {% set is_waitlisted = t.conf.years[t.talk_year].status == 'waitlisted' if t.talk_year and t.conf.years and t.talk_year in t.conf.years and t.conf.years[t.talk_year] else false %}
           <div class="{% if is_waitlisted %}bg-purple-50 border-purple-200{% else %}bg-yellow-50 border-yellow-200{% endif %} rounded p-2 border relative group">
-            <p class="text-sm font-medium {% if is_waitlisted %}text-purple-800{% else %}text-yellow-800{% endif %}">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
+            <p class="text-sm font-medium {% if is_waitlisted %}text-purple-800{% else %}text-yellow-800{% endif %}">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ size_icon(t.conf) }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
             <p class="text-xs {% if is_waitlisted %}text-purple-500{% else %}text-yellow-500{% endif %} mt-1">{{ t.action }}</p>
             {% call hover_popup(align="right") %}
               {{ conf_tooltip(t.conf, t.conf_start, t.conf_end, today) }}
@@ -188,7 +190,7 @@
       <div class="space-y-2">
         {% for t in kanban.accepted %}
           <div class="bg-green-50 rounded p-2 border border-green-200 relative group">
-            <p class="text-sm font-medium text-green-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
+            <p class="text-sm font-medium text-green-800">{{ favorite_star(t.conf) }}{{ t.conf.name }} {{ size_icon(t.conf) }} {{ difficulty_icon(t.conf.difficulty, 14) }}</p>
             <p class="text-xs text-green-500 mt-1">{{ t.action }}</p>
             {% call hover_popup(align="right") %}
               {{ conf_tooltip(t.conf, t.conf_start, t.conf_end, today) }}
@@ -210,7 +212,7 @@
         <div class="relative group">
           <a href="{{ t.conf.website }}" target="_blank" class="font-semibold text-gray-900 hover:text-blue-600 whitespace-nowrap">
             {{ t.conf.name }}
-          </a> {{ difficulty_icon(t.conf.difficulty, 14) }}
+          </a> {{ size_icon(t.conf) }} {{ difficulty_icon(t.conf.difficulty, 14) }}
           {% call hover_popup() %}
             {{ conf_tooltip(t.conf, t.conf_start, t.conf_end, today) }}
           {% endcall %}

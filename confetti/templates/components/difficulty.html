@@ -4,6 +4,22 @@
 {% endif %}
 {% endmacro %}
 
+{% macro size_icon(conf, size=14) %}
+{# One little person per size step (Conference.size_step): under 400, up to 1k, up to 2.5k, bigger.
+   Hovering shows the attendee count right away (a native title never shows over inline SVG).
+   Renders nothing when the size is unknown. #}
+{% if conf.size_step %}
+<span class="relative group/size inline-flex align-middle flex-shrink-0 cursor-default">
+<svg width="{{ (size * (8 * conf.size_step - 1) / 14) | round(1) }}" height="{{ size }}" viewBox="0 0 {{ 8 * conf.size_step - 1 }} 14" fill="#9ca3af" xmlns="http://www.w3.org/2000/svg">
+  {% for index in range(conf.size_step) %}
+  <g transform="translate({{ index * 8 }} 0)"><circle cx="3.5" cy="3" r="2.6"/><path d="M0.3 14 V11 Q0.3 6.8 3.5 6.8 Q6.7 6.8 6.7 11 V14 Z"/></g>
+  {% endfor %}
+</svg>
+<span class="hidden group-hover/size:block absolute left-1/2 -translate-x-1/2 bottom-full mb-1 z-50 bg-gray-800 text-white font-normal rounded px-2 py-1 whitespace-nowrap">{{ '{:,}'.format(conf.attendees) }} attendees</span>
+</span>
+{% endif %}
+{% endmacro %}
+
 {% macro difficulty_icon(level, size=16) %}
 {# Only longshots are marked: 'hard' = small longshot, 'longshot' = big longshot.
    Every other level renders nothing. #}

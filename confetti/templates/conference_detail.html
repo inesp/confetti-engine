@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/difficulty.html" import difficulty_icon %}
+{% from "components/difficulty.html" import difficulty_icon, size_icon %}
 {% from "components/talk_status_select.html" import talk_status_select %}
 {% from "components/cost_form.html" import cost_form %}
 
@@ -29,6 +29,7 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
   <div class="flex items-center gap-3 mb-1">
     <h2 class="text-2xl font-bold text-gray-900">{{ conf.name }}</h2>
+    {{ size_icon(conf, 20) }}
     <form method="POST" action="{{ url_for('conferences.update_favorite_route', conf_name=conf.name) }}">
       <input type="hidden" name="favorite" value="{{ 'false' if conf.favorite else 'true' }}">
       <button type="submit" title="{{ 'Remove from favorites' if conf.favorite else 'Mark as favorite' }}"
@@ -293,6 +294,7 @@
   <div class="flex flex-wrap gap-2">
     {% if conf.budget %}<span class="border border-gray-300 rounded px-2 py-0.5">Budget: <span class="{% if conf.budget == 'full' %}text-green-600{% elif conf.budget == 'partial' %}text-yellow-600{% elif conf.budget == 'ask' %}text-gray-500{% elif conf.budget == 'none' %}text-red-600{% endif %}">{{ conf.budget }}</span></span>{% endif %}
     {% if conf.difficulty in ('hard', 'longshot') %}<span class="border border-gray-300 rounded px-2 py-0.5 flex items-center gap-1">{{ difficulty_icon(conf.difficulty, 14) }} {{ 'Big' if conf.difficulty == 'longshot' else 'Small' }} longshot</span>{% endif %}
+    {% if conf.attendees %}<span class="border border-gray-300 rounded px-2 py-0.5 flex items-center gap-1">{{ size_icon(conf) }} {{ '{:,}'.format(conf.attendees) }} attendees</span>{% endif %}
     {% if conf.lang %}<span class="border border-gray-300 rounded px-2 py-0.5">Language: {{ conf.lang }}</span>{% endif %}
   </div>
   {% if conf.topic_fit %}<div class="mt-2">Topic fit: {{ conf.topic_fit }}</div>{% endif %}

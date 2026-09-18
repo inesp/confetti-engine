@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/difficulty.html" import difficulty_icon %}
+{% from "components/difficulty.html" import difficulty_icon, size_icon %}
 {% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
 {% from "components/money.html" import money %}
 
@@ -83,6 +83,7 @@
         <div class="rounded-lg border-[3px] {% if is_future %}border-green-200 bg-white{% else %}border-green-300 bg-white{% endif %}">
           <div class="{% if is_future %}bg-green-50{% else %}bg-green-100{% endif %} px-3 py-2">
             <a href="{{ pc.conf.website }}" target="_blank" class="font-semibold {% if is_future %}text-gray-500{% else %}text-green-900{% endif %} hover:text-green-600">{{ pc.conf.name }}</a>
+            {{ size_icon(pc.conf) }}
             <a href="{{ url_for('conferences.detail', conf_name=pc.conf.name) }}" class="text-gray-400 hover:text-blue-600 ml-1" title="Details">&#9998;</a>
           </div>
           <div class="px-3 py-2">

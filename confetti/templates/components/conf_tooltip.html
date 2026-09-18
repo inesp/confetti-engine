@@ -1,4 +1,4 @@
-{% from "components/difficulty.html" import difficulty_icon, favorite_star %}
+{% from "components/difficulty.html" import difficulty_icon, favorite_star, size_icon %}
 
 {% macro hover_popup(position="below", align="left", group_name="group", z="z-10") %}
 {#
@@ -37,6 +37,15 @@
       {% elif conf.budget == 'none' %}<span class="text-red-600 font-medium">None</span>
       {% else %}<span class="text-gray-400">Unknown</span>{% endif %}
     </div>
+    <div class="text-gray-400">👥 Size</div>
+    {% if conf.attendees %}
+    <div class="flex items-center gap-1.5">
+      {{ size_icon(conf) }}
+      <span class="text-gray-900">{{ '{:,}'.format(conf.attendees) }} attendees</span>
+    </div>
+    {% else %}
+    <div class="text-gray-400">?</div>
+    {% endif %}
     {% if conf.difficulty in ('hard', 'longshot') %}
     <div class="text-gray-400">🎯 Longshot</div>
     <div class="flex items-center gap-1.5">
