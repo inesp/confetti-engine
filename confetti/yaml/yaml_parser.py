@@ -84,29 +84,6 @@ def _load_and_validate_conferences() -> tuple[list[Conference], list[ConfError]]
     ids_hint = " | ".join(t.id for t in known_talks) if known_talks else "your-talk-id"
 
     for conf in all_conferences:
-        # #14: a cfp block should have presumed open/close dates so the pipeline can estimate timing
-        if conf.cfp:
-            missing_dates = [
-                name
-                for name, value in (
-                    ("presumed_open", conf.cfp.presumed_open),
-                    ("presumed_close", conf.cfp.presumed_close),
-                )
-                if not value
-            ]
-            if missing_dates:
-                all_errors.append(
-                    ConfError(
-                        conf.filename,
-                        conf.name,
-                        [
-                            f"CFP is missing {' and '.join(missing_dates)}. Fill in:\n"
-                            + "\n".join(f"      {name}: MM-DD" for name in missing_dates)
-                        ],
-                        level=ErrorLevel.warning,
-                    )
-                )
-
         for year, entry in (conf.years or {}).items():
             if entry is None:
                 continue
