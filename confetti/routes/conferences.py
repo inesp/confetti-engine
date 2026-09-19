@@ -73,7 +73,7 @@ def index() -> str:
     coming_up.extend(cfp_closed)
 
     gantt_bars, gantt_months = build_gantt(timeline, today)
-    cfp_bars, cfp_months = build_cfp_gantt(timeline, today)
+    cfp_bars, cfp_months, cfp_today_pct = build_cfp_gantt(timeline, today)
     yearly_dots, yearly_months = build_yearly_dot_timeline(conferences, today.year)
 
     return render_template(
@@ -89,6 +89,7 @@ def index() -> str:
         gantt_months=gantt_months,
         cfp_bars=cfp_bars,
         cfp_months=cfp_months,
+        cfp_today_pct=cfp_today_pct,
         yearly_dots=yearly_dots,
         yearly_months=yearly_months,
         talk_statuses=list(TalkStatus),

@@ -36,7 +36,7 @@ def _presumed(open_md: str, close_md: str) -> Cfp:
 
 def _bars(confs: list[Conference]) -> list:
     timeline = build_timeline(confs)
-    bars, _ = build_cfp_gantt(timeline, TODAY)
+    bars, _, _ = build_cfp_gantt(timeline, TODAY)
     return bars
 
 
@@ -173,3 +173,75 @@ def test_skipped_conferences_sort_to_the_end():
     )
     result = [bar.conf.name for bar in _bars([skipped, normal])]
     assert result == ["Normal", "Skipped"]
+
+
+@freeze_time("2026-07-09")
+def test_window_that_closed_earlier_this_month_is_excluded():
+    # The chart starts on the 1st of the month, but only CFPs still open today belong on it.
+    conf = _conf(
+        "Conf",
+        years={
+            2026: YearEntry(conference_start=date(2026, 9, 1), cfp_open=date(2026, 6, 1), cfp_close=date(2026, 7, 5))
+        },
+    )
+    result = _bars([conf])
+    assert result == []
+
+
+@freeze_time("2026-07-09")
+def test_today_line_sits_after_the_start_of_the_month():
+    _, _, result = build_cfp_gantt(build_timeline([]), TODAY)
+    # Chart runs 1 Jul 2026 to 1 Apr 2027 (274 days); 9 Jul is 8 days in.
+    assert result == 8 / 274 * 100
+
+
+@freeze_time("2026-07-09")
+def test_cfp_open_today_with_real_dates_is_open():
+    conf = _conf(
+        "Conf",
+        years={
+            2026: YearEntry(conference_start=date(2026, 10, 1), cfp_open=date(2026, 7, 1), cfp_close=date(2026, 8, 1))
+        },
+    )
+    result = _bars([conf])[0].open_badge
+    assert result == "open"
+
+
+@freeze_time("2026-07-09")
+def test_cfp_open_today_with_guessed_dates_is_maybe_open():
+    conf = _conf(
+        "Conf",
+        years={2026: YearEntry(conference_start=date(2026, 10, 1))},
+        cfp=_presumed("07-01", "08-01"),
+    )
+    result = _bars([conf])[0].open_badge
+    assert result == "open?"
+
+
+@freeze_time("2026-07-09")
+def test_cfp_not_open_yet_has_no_badge():
+    conf = _conf(
+        "Conf",
+        years={
+            2026: YearEntry(conference_start=date(2026, 10, 1), cfp_open=date(2026, 8, 1), cfp_close=date(2026, 9, 1))
+        },
+    )
+    result = _bars([conf])[0].open_badge
+    assert result is None
+
+
+@freeze_time("2026-07-09")
+def test_cfp_already_submitted_to_has_no_badge():
+    conf = _conf(
+        "Conf",
+        years={
+            2026: YearEntry(
+                conference_start=date(2026, 10, 1),
+                cfp_open=date(2026, 7, 1),
+                cfp_close=date(2026, 8, 1),
+                talks=[TalkEntry(talk="t1", status=TalkStatus.submitted, title="T")],
+            )
+        },
+    )
+    result = _bars([conf])[0].open_badge
+    assert result is None

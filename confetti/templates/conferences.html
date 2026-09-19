@@ -93,9 +93,14 @@
       <!-- Month markers -->
       {% for m in cfp_months %}
       <div class="absolute top-0 bottom-0 border-l border-dashed border-gray-200" style="left: {{ m.position_pct }}%;">
-        <span class="absolute text-gray-400" style="font-size: 11px; top: 0; left: 3px;">{{ m.label }}</span>
+        {# The today label takes over when the month starts right next to it #}
+        {% if (m.position_pct - cfp_today_pct) | abs > 3 %}<span class="absolute text-gray-400" style="font-size: 11px; top: 0; left: 3px;">{{ m.label }}</span>{% endif %}
       </div>
       {% endfor %}
+      <!-- Today -->
+      <div class="absolute top-0 bottom-0 border-l-2 border-blue-500 z-10 pointer-events-none" style="left: {{ cfp_today_pct }}%;">
+        <span class="absolute text-blue-600 font-semibold" style="font-size: 11px; top: 0; left: 4px;">today</span>
+      </div>
 
       <!-- Bars -->
       {% for bar in cfp_bars %}
@@ -112,6 +117,11 @@
           {{ conf_tooltip(bar.conf, today=today) }}
         {% endcall %}
       </div>
+      {% if bar.open_badge %}
+      <div class="absolute flex items-center pointer-events-none z-10" style="left: calc({{ cfp_today_pct }}% + 5px); top: {{ loop.index0 * 32 + 24 }}px; height: 20px;">
+        <span class="rounded-full px-1.5 font-semibold leading-4 {% if bar.open_badge == 'open' %}bg-green-600 text-white{% else %}bg-green-100 text-green-800 border border-green-400{% endif %}" style="font-size: 11px;">{{ bar.open_badge }}</span>
+      </div>
+      {% endif %}
       {% set star_after = bar.conf.favorite and bar_end < 93 %}
       {% if bar.conf.favorite and bar.left_pct > 3 %}
       <div class="absolute flex items-center pointer-events-none" style="right: calc({{ 100 - bar.left_pct }}% + 4px); top: {{ loop.index0 * 32 + 24 }}px; height: 20px;">{{ favorite_star(bar.conf, 13) }}</div>
@@ -120,7 +130,7 @@
       <div class="absolute flex items-center pointer-events-none" style="left: {{ bar_end }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; padding-left: 4px;">{{ favorite_star(bar.conf, 13) }}</div>
       {% endif %}
       {% if bar_end <= 88 %}
-      <div class="absolute flex items-center text-gray-500 pointer-events-none" style="left: {{ bar_end }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; font-size: 11px; padding-left: {{ '24px' if star_after else '6px' }}; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
+      <div class="absolute flex items-center text-gray-500 pointer-events-none" style="left: {{ bar_end }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; font-size: 11px; padding-left: {{ '52px' if bar.open_badge and bar_end - cfp_today_pct < 5 else ('24px' if star_after else '6px') }}; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
       {% else %}
       <div class="absolute flex items-center justify-end text-gray-600 pointer-events-none" style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; font-size: 11px; padding-right: 5px; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
       {% endif %}

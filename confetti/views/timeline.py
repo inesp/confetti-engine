@@ -239,12 +239,18 @@ class CfpBar:
     left_pct: float
     width_pct: float
     status: CfpBarStatus
+    # "open" when the CFP is open today by real dates, "open?" when by guessed dates, None otherwise.
+    # Only for CFPs still to submit to: not for skipped, submitted or accepted ones.
+    open_badge: str | None = None
 
 
 def build_cfp_gantt(
     timeline: list[ConferenceTimeline], today: date, months_ahead: int = 9
-) -> tuple[list[CfpBar], list[MonthMarker]]:
-    """Build horizontal bars for CFP windows overlapping the next `months_ahead` months.
+) -> tuple[list[CfpBar], list[MonthMarker], float]:
+    """Build horizontal bars for CFP windows still open today or opening in the next `months_ahead` months.
+
+    The chart starts on the 1st of this month so today's line sits inside it and an open CFP
+    visibly crosses it. Returns the bars, the month markers and today's position in percent.
 
     Colour per row:
       accepted  -> a talk was accepted for that edition (green)
@@ -252,7 +258,7 @@ def build_cfp_gantt(
       known     -> the CFP close date is factual (purple)
       guess     -> the CFP close date is a guess (orange)
     """
-    range_start = today
+    range_start = date(today.year, today.month, 1)
     range_end = date(
         today.year + (today.month - 1 + months_ahead) // 12, (today.month - 1 + months_ahead) % 12 + 1, 1
     )
@@ -267,7 +273,7 @@ def build_cfp_gantt(
         if cfp_open is None or cfp_close is None:
             continue
         # Keep only CFP windows that overlap [today, range_end].
-        if cfp_close < range_start or cfp_open > range_end:
+        if cfp_close < today or cfp_open > range_end:
             continue
 
         if item.skipped:
@@ -280,6 +286,10 @@ def build_cfp_gantt(
             status = CfpBarStatus.known
         else:
             status = CfpBarStatus.guess
+
+        open_badge = None
+        if status in (CfpBarStatus.known, CfpBarStatus.guess) and cfp_open <= today <= cfp_close:
+            open_badge = "open" if next_event.cfp_open_is_factual and next_event.cfp_close_is_factual else "open?"
 
         visible_start = max(cfp_open, range_start)
         visible_end = min(cfp_close, range_end)
@@ -294,6 +304,7 @@ def build_cfp_gantt(
                 left_pct=left,
                 width_pct=width,
                 status=status,
+                open_badge=open_badge,
             )
         )
 
@@ -315,7 +326,8 @@ def build_cfp_gantt(
         else:
             month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
 
-    return bars_raw, months
+    today_pct = (today - range_start).days / total_days * 100
+    return bars_raw, months, today_pct
 
 
 def build_gantt(timeline: list[ConferenceTimeline], today: date) -> tuple[list[TimelineBar], list[MonthMarker]]:
