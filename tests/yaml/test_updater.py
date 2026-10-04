@@ -2,16 +2,18 @@ from datetime import date
 
 import yaml
 
-from confetti.models import Conference
+from confetti.models import Booker, Booking, BookingStatus, Conference, Cost
 from confetti.yaml.yaml_updater import (
     add_talk,
     update_attendees,
+    update_cost,
     update_cfp_url,
     update_cfp_window,
     update_difficulty,
     update_favorite,
     update_skip,
     update_talk_title,
+    update_travel,
     update_year_skip,
 )
 
@@ -147,6 +149,42 @@ def test_add_talk_appends_submission(tmp_path, monkeypatch):
     add_talk(conf, 2026, "estimation", "A Fresh Talk")
     result = _reload(tmp_path)["years"][2026]["talks"][-1]
     assert result == {"talk": "estimation", "status": "submitted", "title": "A Fresh Talk"}
+
+
+def test_update_travel_writes_both_bookings(tmp_path, monkeypatch):
+    conf = _conf(tmp_path, monkeypatch)
+    bookings = {
+        "flight": Booking(
+            by=Booker.organizer, status=BookingStatus.waiting, ping_on=date(2026, 10, 8), note="sent travel details"
+        ),
+        "hotel": Booking(status=BookingStatus.done, cost=312.4),
+    }
+    update_travel(conf, 2026, bookings)
+    result = _reload(tmp_path)["years"][2026]["travel"]
+    assert result == {
+        "flight": {
+            "by": "organizer",
+            "status": "waiting",
+            "ping_on": date(2026, 10, 8),
+            "note": "sent travel details",
+        },
+        "hotel": {"by": "me", "status": "done", "cost": 312.4},
+    }
+
+
+def test_update_cost_writes_optional_fields_only_when_set(tmp_path, monkeypatch):
+    conf = _conf(tmp_path, monkeypatch)
+    cost = Cost(extra=40, extra_note="taxis", promised=600, covered=0, refused=True, note="never replied")
+    update_cost(conf, 2026, cost)
+    result = _reload(tmp_path)["years"][2026]["cost"]
+    assert result == {
+        "extra": 40,
+        "promised": 600,
+        "covered": 0,
+        "extra_note": "taxis",
+        "refused": True,
+        "note": "never replied",
+    }
 
 
 def test_write_does_not_wrap_long_values(tmp_path, monkeypatch):

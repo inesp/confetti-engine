@@ -14,7 +14,7 @@ def _conf(name: str, cost: Cost | None) -> Conference:
 
 
 def test_owed_is_promised_minus_covered():
-    cost = Cost(flight=300, promised=600, covered=200)
+    cost = Cost(extra=300, promised=600, covered=200)
     owed, total = reimbursements_owed([_conf("ConfA", cost)])
     result = ([(item.name, item.year, item.amount) for item in owed], total)
     assert result == ([("ConfA", 2026, 400)], 400.0)
@@ -26,7 +26,7 @@ def test_fully_covered_not_owed():
 
 
 def test_no_promise_not_owed():
-    result = reimbursements_owed([_conf("ConfA", Cost(flight=300, covered=200))])
+    result = reimbursements_owed([_conf("ConfA", Cost(extra=300, covered=200))])
     assert result == ([], 0.0)
 
 

@@ -7,7 +7,9 @@ from typing import Any
 
 from ruamel.yaml import YAML
 
+from confetti.models import Booking
 from confetti.models import Conference
+from confetti.models import Cost
 
 _yaml = YAML()
 _yaml.preserve_quotes = True
@@ -256,27 +258,48 @@ def update_vacation_days(conf: Conference, year: int, vacation_days: int) -> Non
         year_data["vacation_days"] = vacation_days
 
 
-def update_cost(
-    conf: Conference,
-    year: int,
-    flight: float | None,
-    hotel: float | None,
-    extra: float | None,
-    promised: float | None,
-    covered: float | None,
-) -> None:
-    """Update cost fields for a conference year."""
+def update_cost(conf: Conference, year: int, cost: Cost) -> None:
+    """Write the cash side and extras of a conference year. Flight and hotel prices are written by update_travel."""
     with _edit_year(conf, year) as year_data:
         if year_data is None:
             return
         if year_data.get("cost") is None:
             year_data["cost"] = {}
-        cost = year_data["cost"]
-        cost["flight"] = flight
-        cost["hotel"] = hotel
-        cost["extra"] = extra
-        cost["promised"] = promised
-        cost["covered"] = covered
+        cost_data = year_data["cost"]
+        cost_data.pop("flight", None)
+        cost_data.pop("hotel", None)
+        cost_data["extra"] = cost.extra
+        cost_data["promised"] = cost.promised
+        cost_data["covered"] = cost.covered
+        optional: dict[str, Any] = {
+            "extra_note": cost.extra_note,
+            "paid_on": cost.paid_on,
+            "refused": cost.refused,
+            "note": cost.note,
+        }
+        for key, value in optional.items():
+            if value:
+                cost_data[key] = value
+            else:
+                cost_data.pop(key, None)
+
+
+def update_travel(conf: Conference, year: int, bookings: dict[str, Booking]) -> None:
+    """Write the flight/hotel bookings for a conference year, right after cost."""
+    with _edit_year(conf, year) as year_data:
+        if year_data is None:
+            return
+        travel = {}
+        for item, booking in bookings.items():
+            fields: dict[str, Any] = {"by": str(booking.by), "status": str(booking.status)}
+            if booking.cost is not None:
+                fields["cost"] = booking.cost
+            if booking.ping_on:
+                fields["ping_on"] = booking.ping_on
+            if booking.note:
+                fields["note"] = booking.note
+            travel[item] = fields
+        _set_after(year_data, "travel", travel, after="cost")
 
 
 def update_skip(conf: Conference, skip: bool) -> None:

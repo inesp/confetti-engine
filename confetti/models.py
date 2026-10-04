@@ -104,26 +104,115 @@ COUNTRY_CODES = {
 
 
 class Cost(BaseModel):
+    """The money that isn't tied to one booking. Flight and hotel prices live on their Booking.
+
+    promised and covered are cash only: what the organizers pay back. Whatever they book themselves
+    counts on its own, see TripCost.
+    """
+
     model_config = ConfigDict(extra="forbid")
+
+    extra: float | None = None
+    extra_note: str = ""
+    promised: float | None = None
+    covered: float | None = None
+    paid_on: date | None = None
+    refused: bool = False  # they promised cash, then wouldn't pay; note says why
+    note: str = ""
+
+
+@dataclass
+class TripCost:
+    """Every euro of one edition in one place, split by where the money comes from.
+
+    total is what the trip would cost if nobody covered anything. Organizers pay in two ways: by booking
+    the flight or hotel themselves (in kind, read off the bookings) and by paying cash back (the cost block).
+    """
 
     flight: float | None = None
     hotel: float | None = None
     extra: float | None = None
-    promised: float | None = None
-    covered: float | None = None
+    cash_promised: float | None = None
+    cash_covered: float | None = None
+    cash_refused: bool = False
+    organizer_booked: float = 0  # organizer bookings that are done: promised and delivered
+    organizer_booking: float = 0  # organizer bookings still to come: promised, not delivered yet
+    organizer_items: tuple[str, ...] = ()  # which of "flight"/"hotel" the organizers book
 
     @property
     def total(self) -> float:
         return round((self.flight or 0) + (self.hotel or 0) + (self.extra or 0), 2)
 
     @property
+    def promised(self) -> float:
+        """A refused cash promise no longer counts: they won't pay what they already haven't."""
+        cash = self.cash_covered if self.cash_refused else self.cash_promised
+        return round(self.organizer_booked + self.organizer_booking + (cash or 0), 2)
+
+    @property
+    def covered(self) -> float:
+        return round(self.organizer_booked + (self.cash_covered or 0), 2)
+
+    @property
     def effective_covered(self) -> float:
-        return min(self.covered or 0, self.total)
+        return min(self.covered, self.total)
+
+    @property
+    def out_of_pocket(self) -> float:
+        return round(self.total - self.effective_covered, 2)
+
+    @property
+    def out_of_pocket_after_promised(self) -> float:
+        return round(self.total - min(self.promised, self.total), 2)
 
     @property
     def owed(self) -> float:
-        """What they promised but haven't covered yet."""
-        return round(max((self.promised or 0) - (self.covered or 0), 0), 2)
+        """Cash they promised but haven't paid yet. Pending organizer bookings nag on the home page instead."""
+        if self.cash_refused:
+            return 0
+        return round(max((self.cash_promised or 0) - (self.cash_covered or 0), 0), 2)
+
+
+class Booker(StrEnum):
+    me = auto()
+    organizer = auto()
+
+
+class BookingStatus(StrEnum):
+    todo = auto()  # my move: book it, or send the organizers what they need
+    waiting = auto()  # their move: nag me again on ping_on
+    done = auto()
+
+
+class Booking(BaseModel):
+    """One thing to book for a trip (the flight or the hotel): who books it and whose move it is."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    by: Booker = Booker.me
+    status: BookingStatus = BookingStatus.todo
+    cost: float | None = None
+    ping_on: date | None = None
+    note: str = ""
+
+    @property
+    def summary(self) -> str:
+        """One line for the hover box, e.g. "organizers book, waiting, ping 08. Oct"."""
+        if self.status == BookingStatus.done:
+            return "booked by organizers" if self.by == Booker.organizer else "booked"
+        if self.status == BookingStatus.todo:
+            return "organizers book, your move" if self.by == Booker.organizer else "to book"
+        parts = ["organizers book, waiting" if self.by == Booker.organizer else "waiting"]
+        if self.ping_on:
+            parts.append(f"ping {self.ping_on.strftime('%d. %b')}")
+        return ", ".join(parts)
+
+
+class Travel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    flight: Booking | None = None
+    hotel: Booking | None = None
 
 
 @dataclass
@@ -161,8 +250,42 @@ class YearEntry(BaseModel):
     conference_end: date | None = None
     talks: list[TalkEntry] = Field(default_factory=list)
     cost: Cost | None = None
+    travel: Travel | None = None
     vacation_days: int = 0
     skip: bool = False
+
+    @property
+    def bookings(self) -> dict[str, Booking]:
+        """Flight and hotel, each defaulting to "I still have to book it" when not written down yet."""
+        travel = self.travel or Travel()
+        return {"flight": travel.flight or Booking(), "hotel": travel.hotel or Booking()}
+
+    @property
+    def money(self) -> TripCost | None:
+        """None when nothing about money was written down yet: no cost block and no booking price."""
+        bookings = self.bookings
+        flight = bookings["flight"].cost
+        hotel = bookings["hotel"].cost
+        if self.cost is None and flight is None and hotel is None:
+            return None
+        cost = self.cost or Cost()
+        money = TripCost(
+            flight=flight,
+            hotel=hotel,
+            extra=cost.extra,
+            cash_promised=cost.promised,
+            cash_covered=cost.covered,
+            cash_refused=cost.refused,
+        )
+        for item, booking in bookings.items():
+            if booking.by != Booker.organizer:
+                continue
+            money.organizer_items += (item,)
+            if booking.status == BookingStatus.done:
+                money.organizer_booked += booking.cost or 0
+            else:
+                money.organizer_booking += booking.cost or 0
+        return money
 
     @property
     def status(self) -> TalkStatus | None:

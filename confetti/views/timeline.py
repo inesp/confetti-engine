@@ -5,7 +5,7 @@ from enum import StrEnum, auto
 
 from confetti.conference_view import ConferenceTimeline
 from confetti.conference_view import KanbanColumn
-from confetti.models import Conference, Cost, TalkEntry, TalkStatus
+from confetti.models import Conference, TalkEntry, TalkStatus, TripCost
 
 _MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -102,7 +102,7 @@ class PastConference:
     conference_start: date | None
     conference_end: date | None
     talks: list[TalkEntry]
-    cost: Cost | None = None
+    cost: TripCost | None = None
 
     vacation_days: int = 0
 
@@ -127,7 +127,7 @@ def build_past_conferences(conferences: list[Conference]) -> list[PastConference
                     conference_start=entry.conference_start,
                     conference_end=entry.conference_end,
                     talks=entry.talks,
-                    cost=entry.cost,
+                    cost=entry.money,
                     vacation_days=entry.vacation_days,
                 )
             )
@@ -150,6 +150,7 @@ class YearSummary:
     extra: float = 0
     covered: float = 0
     promised: float = 0
+    organizer_booked: float = 0
     out_of_pocket_per_conf: list[float] = field(default_factory=list)
     costed_conf_days: int = 0
 
@@ -196,19 +197,21 @@ def build_year_summaries(years: dict[int, list[PastConference]]) -> dict[int, Ye
             if not pc.cost:
                 continue
             summary.costed_conf_days += pc.conf_days
-            conf_total = (pc.cost.flight or 0) + (pc.cost.hotel or 0) + (pc.cost.extra or 0)
-            conf_oop = conf_total - pc.cost.effective_covered
+            conf_total = pc.cost.total
+            conf_oop = pc.cost.out_of_pocket
             summary.out_of_pocket_per_conf.append(conf_oop)
             summary.flight += pc.cost.flight or 0
             summary.hotel += pc.cost.hotel or 0
             summary.extra += pc.cost.extra or 0
             summary.covered += pc.cost.effective_covered
+            summary.organizer_booked += pc.cost.organizer_booked
             summary.promised += min(pc.cost.promised or 0, conf_total)
         summary.flight = round(summary.flight, 2)
         summary.hotel = round(summary.hotel, 2)
         summary.extra = round(summary.extra, 2)
         summary.covered = round(summary.covered, 2)
         summary.promised = round(summary.promised, 2)
+        summary.organizer_booked = round(summary.organizer_booked, 2)
         result[year] = summary
     return result
 

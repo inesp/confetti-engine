@@ -15,6 +15,10 @@ from confetti.conference_view import best_year
 from confetti.conference_view import build_detail_nav
 from confetti.conference_view import build_timeline
 from confetti.constants import BEFORE_CFP_OPEN
+from confetti.models import Booker
+from confetti.models import Booking
+from confetti.models import BookingStatus
+from confetti.models import Cost
 from confetti.models import TalkStatus
 from confetti.views.timeline import build_cfp_gantt
 from confetti.views.timeline import build_gantt
@@ -33,6 +37,7 @@ from confetti.yaml.yaml_updater import add_talk
 from confetti.yaml.yaml_updater import update_talk_status
 from confetti.yaml.yaml_updater import update_talk_time
 from confetti.yaml.yaml_updater import update_talk_title
+from confetti.yaml.yaml_updater import update_travel
 from confetti.yaml.yaml_updater import update_vacation_days
 
 conferences_bp = Blueprint("conferences", __name__)
@@ -168,6 +173,8 @@ def detail(conf_name: str) -> str | werkzeug.Response:
         today=today,
         year_entry=year_entry,
         talk_statuses=list(TalkStatus),
+        bookers=list(Booker),
+        booking_statuses=list(BookingStatus),
         all_talks=load_talks(),
         prev_conf=prev_conf,
         next_conf=next_conf,
@@ -270,8 +277,9 @@ def update_vacation_days_route(conf_name: str) -> werkzeug.Response:
     return redirect(url_for("conferences.detail", conf_name=conf_name))
 
 
-@conferences_bp.route("/conferences/<conf_name>/update-cost", methods=["POST"])
-def update_cost_route(conf_name: str) -> werkzeug.Response:
+@conferences_bp.route("/conferences/<conf_name>/update-travel-cost", methods=["POST"])
+def update_travel_cost_route(conf_name: str) -> werkzeug.Response:
+    """Flight and hotel each carry who books, whose move it is, and the price; one form saves them all."""
     year = int(request.form["year"])
 
     def _parse_float(value: str) -> float | None:
@@ -280,16 +288,33 @@ def update_cost_route(conf_name: str) -> werkzeug.Response:
             return None
         return float(value)
 
-    flight = _parse_float(request.form.get("flight", ""))
-    hotel = _parse_float(request.form.get("hotel", ""))
-    extra = _parse_float(request.form.get("extra", ""))
-    promised = _parse_float(request.form.get("promised", ""))
-    covered = _parse_float(request.form.get("covered", ""))
+    paid_on = request.form.get("paid_on", "").strip()
+    cost = Cost(
+        extra=_parse_float(request.form.get("extra", "")),
+        extra_note=request.form.get("extra_note", "").strip(),
+        promised=_parse_float(request.form.get("promised", "")),
+        covered=_parse_float(request.form.get("covered", "")),
+        paid_on=date.fromisoformat(paid_on) if paid_on else None,
+        refused=request.form.get("refused") == "on",
+        note=request.form.get("cash_note", "").strip(),
+    )
+
+    bookings: dict[str, Booking] = {}
+    for item in ("flight", "hotel"):
+        ping_on = request.form.get(f"{item}_ping_on", "").strip()
+        bookings[item] = Booking(
+            by=Booker(request.form[f"{item}_by"]),
+            status=BookingStatus(request.form[f"{item}_status"]),
+            cost=_parse_float(request.form.get(f"{item}_cost", "")),
+            ping_on=date.fromisoformat(ping_on) if ping_on else None,
+            note=request.form.get(f"{item}_note", "").strip(),
+        )
 
     conferences, _ = load_and_validate_conferences()
     conf = next((c for c in conferences if c.name == conf_name), None)
     if conf:
-        update_cost(conf, year, flight, hotel, extra, promised, covered)
+        update_cost(conf, year, cost)
+        update_travel(conf, year, bookings)
 
     return redirect(url_for("conferences.detail", conf_name=conf_name))
 

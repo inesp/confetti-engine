@@ -56,7 +56,7 @@
       <div class="flex items-baseline gap-3 mb-3">
         <h4 class="text-lg font-bold text-indigo-600">{{ year }}</h4>
         {% set ys = year_summaries[year] %}
-        <span class="text-gray-500">{{ ys.conf_count }} conference{{ 's' if ys.conf_count != 1 }} · {{ ys.vacation_days }} vacation day{{ 's' if ys.vacation_days != 1 }}{% if ys.total > 0 %} · {% call money() %}{{ ys.total|int }}€ total · <span class="relative group/oop cursor-default">{{ ys.out_of_pocket|int }}€ out of pocket<div class="hidden group-hover/oop:block absolute left-0 top-full pt-1 z-10"><div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">{% for pc in confs %}{% if pc.cost %}<div>{{ pc.conf.name }}: {{ (pc.cost.total - pc.cost.effective_covered)|int }}€</div>{% endif %}{% endfor %}</div></div></span>{% if ys.out_of_pocket_after_promised != ys.out_of_pocket %} now · {{ ys.out_of_pocket_after_promised|int }}€ once promised {% endif %}{% endcall %}{% endif %}</span>
+        <span class="text-gray-500">{{ ys.conf_count }} conference{{ 's' if ys.conf_count != 1 }} · {{ ys.vacation_days }} vacation day{{ 's' if ys.vacation_days != 1 }}{% if ys.total > 0 %} · {% call money() %}{{ ys.total|int }}€ total · <span class="relative group/oop cursor-default">{{ ys.out_of_pocket|int }}€ out of pocket<div class="hidden group-hover/oop:block absolute left-0 top-full pt-1 z-10"><div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">{% for pc in confs %}{% if pc.cost %}<div>{{ pc.conf.name }}: {{ pc.cost.out_of_pocket|int }}€</div>{% endif %}{% endfor %}</div></div></span>{% if ys.out_of_pocket_after_promised != ys.out_of_pocket %} now · {{ ys.out_of_pocket_after_promised|int }}€ once promised {% endif %}{% endcall %}{% endif %}</span>
       </div>
 
       {% set dots, months = year_dots[year] %}
@@ -106,10 +106,11 @@
             <div class="mt-2 pt-2 border-t border-green-200 {% if is_future %}text-gray-400{% else %}text-gray-600{% endif %} relative group/cost">
               {% call money() %}
               {% if pc.cost %}
-              💰 {{ pc.cost.total }}€ · {{ pc.cost.covered or 0 }}€ covered{% if pc.cost.promised is not none and pc.cost.promised != (pc.cost.covered or 0) %} <span class="text-gray-400">(of {{ pc.cost.promised|int }}€ promised)</span>{% endif %}{% if pc.cost.owed %} <span class="text-amber-600">· {{ pc.cost.owed|int }}€ owed</span>{% endif %}
+              💰 {{ pc.cost.total }}€ · {{ pc.cost.covered or 0 }}€ covered{% if pc.cost.promised != pc.cost.covered %} <span class="text-gray-400">(of {{ pc.cost.promised|int }}€ promised)</span>{% endif %}{% if pc.cost.owed %} <span class="text-amber-600">· {{ pc.cost.owed|int }}€ owed</span>{% endif %}
               {% call hover_popup(position="above", group_name="group/cost") %}
                 <div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">
-                  ✈️ Flight: {{ pc.cost.flight or 0 }}€ · 🏨 Hotel: {{ pc.cost.hotel or 0 }}€{% if pc.cost.extra %} · ➕ Extra: {{ pc.cost.extra }}€{% endif %}
+                  ✈️ Flight: {{ pc.cost.flight or 0 }}€{% if 'flight' in pc.cost.organizer_items %} (organizers){% endif %} · 🏨 Hotel: {{ pc.cost.hotel or 0 }}€{% if 'hotel' in pc.cost.organizer_items %} (organizers){% endif %}{% if pc.cost.extra %} · ➕ Extra: {{ pc.cost.extra }}€{% endif %}
+                  {% if pc.cost.cash_promised %}<div>💶 Cash: {{ pc.cost.cash_covered or 0 }}€ paid of {{ pc.cost.cash_promised }}€{% if pc.cost.cash_refused %}, refused{% endif %}</div>{% endif %}
                 </div>
               {% endcall %}
               {% else %}
@@ -161,7 +162,7 @@
         <td class="py-2 font-semibold text-gray-900">{{ year }}</td>
         <td class="py-2 text-gray-700">{{ summary.vacation_days }}</td>
         <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.total) }}€ <span class="text-gray-400">{{ "{:,.0f}".format(summary.flight) }}€ flights · {{ "{:,.0f}".format(summary.hotel) }}€ hotels{% if summary.extra > 0 %} · {{ "{:,.0f}".format(summary.extra) }}€ extra{% endif %}</span>{% endcall %}</td>
-        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.out_of_pocket) }}€ <span class="text-gray-400">({{ "{:,.0f}".format(summary.covered) }}€ covered)</span>{% endcall %}</td>
+        <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.out_of_pocket) }}€ <span class="text-gray-400">({{ "{:,.0f}".format(summary.covered) }}€ covered{% if summary.organizer_booked %}, {{ "{:,.0f}".format(summary.organizer_booked) }}€ of it booked by organizers{% endif %})</span>{% endcall %}</td>
         <td class="py-2 text-gray-700">{% call money() %}{{ "{:,.0f}".format(summary.out_of_pocket_after_promised) }}€ <span class="text-gray-400">({{ "{:,.0f}".format(summary.promised) }}€ promised)</span>{% endcall %}</td>
       </tr>
       {% endfor %}

@@ -1,0 +1,101 @@
+{% macro euro_input(name, value, border_class, focus_class, accent_class) %}
+<div class="relative">
+  <input type="number" name="{{ name }}" value="{{ value if value is not none else '' }}" step="0.01" min="0"
+    class="w-28 px-2 py-1 border-2 {{ border_class }} rounded text-gray-700 {{ focus_class }} pr-8">
+  <span class="absolute right-2 top-1/2 -translate-y-1/2 {{ accent_class }}">&euro;</span>
+</div>
+{% endmacro %}
+
+{% macro money_input(name, value, label, label_class, border_class, focus_class, accent_class) %}
+<div class="flex items-center gap-2">
+  <label class="{{ label_class }}">{{ label }}</label>
+  {{ euro_input(name, value, border_class, focus_class, accent_class) }}
+</div>
+{% endmacro %}
+
+{% macro booking_row(item, label, booking, bookers, booking_statuses) %}
+<div class="flex flex-wrap items-center gap-2">
+  <span class="w-20 text-gray-600">{{ label }}</span>
+  <select name="{{ item }}_by" class="px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 cursor-pointer focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    {% for booker in bookers %}
+    <option value="{{ booker }}" {% if booking.by == booker %}selected{% endif %}>{{ 'I book' if booker == 'me' else 'Organizers book' }}</option>
+    {% endfor %}
+  </select>
+  <select name="{{ item }}_status" class="px-2 py-1 bg-white border border-gray-300 rounded cursor-pointer focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+    {% if booking.status == 'done' %}text-green-700{% elif booking.status == 'waiting' %}text-blue-700{% else %}text-amber-700{% endif %}">
+    {% for status in booking_statuses %}
+    <option value="{{ status }}" {% if booking.status == status %}selected{% endif %}>{{ {'todo': 'My move', 'waiting': 'Waiting on them', 'done': 'Booked'}[status] }}</option>
+    {% endfor %}
+  </select>
+  {{ euro_input(item ~ "_cost", booking.cost, "border-orange-300", "focus:border-orange-500 focus:ring-1 focus:ring-orange-500", "text-orange-400") }}
+  <label class="text-gray-500">ping on</label>
+  <input type="date" name="{{ item }}_ping_on" value="{{ booking.ping_on.isoformat() if booking.ping_on else '' }}"
+    class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+  <input type="text" name="{{ item }}_note" value="{{ booking.note }}" placeholder="what I sent, what they said..."
+    class="flex-grow min-w-[12rem] px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+</div>
+{% endmacro %}
+
+{% macro travel_cost_form(year_entry, year, conf_name, bookers, booking_statuses) %}
+{% set bookings = year_entry.bookings %}
+{% set cost = year_entry.cost %}
+{% set money = year_entry.money %}
+<form method="POST" action="{{ url_for('conferences.update_travel_cost_route', conf_name=conf_name) }}" class="space-y-2">
+  <input type="hidden" name="year" value="{{ year }}">
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="w-20 text-gray-600">💶 Cash</span>
+    {{ money_input("promised", cost.promised if cost else none, "promised", "text-blue-700", "border-blue-300", "focus:border-blue-500 focus:ring-1 focus:ring-blue-500", "text-blue-400") }}
+    {{ money_input("covered", cost.covered if cost else none, "paid", "text-green-700", "border-green-400", "focus:border-green-600 focus:ring-1 focus:ring-green-500", "text-green-500") }}
+    <label class="text-gray-500">on</label>
+    <input type="date" name="paid_on" value="{{ cost.paid_on.isoformat() if cost and cost.paid_on else '' }}" class="px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+    <label class="flex items-center gap-1.5 cursor-pointer {{ 'text-red-600 font-semibold' if cost and cost.refused else 'text-gray-500' }}">
+      <input type="checkbox" name="refused" {% if cost and cost.refused %}checked{% endif %}> refused
+    </label>
+    <input type="text" name="cash_note" value="{{ cost.note if cost else '' }}" placeholder="when they promised, why they refused..."
+      class="flex-grow min-w-[12rem] px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+  </div>
+  {{ booking_row('flight', '✈️ Flight', bookings.flight, bookers, booking_statuses) }}
+  {{ booking_row('hotel', '🏨 Hotel', bookings.hotel, bookers, booking_statuses) }}
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="w-20 text-gray-600">➕ Extra</span>
+    {{ euro_input("extra", cost.extra if cost else none, "border-orange-300", "focus:border-orange-500 focus:ring-1 focus:ring-orange-500", "text-orange-400") }}
+    <input type="text" name="extra_note" value="{{ cost.extra_note if cost else '' }}" placeholder="what it was: taxis, food, train..."
+      class="flex-grow min-w-[12rem] px-2 py-1 border border-gray-300 rounded text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+  </div>
+  <div class="flex items-center gap-2 pt-1">
+    <span class="w-20"></span>
+    <button type="submit" class="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700">Save</button>
+  </div>
+
+  {% if cost and cost.promised is not none and cost.covered is not none and cost.covered > cost.promised %}
+  <div class="mt-3 flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-900 rounded px-3 py-2">
+    <span>⚠️</span>
+    <span>Cash paid ({{ "{:,.0f}".format(cost.covered) }}&euro;) is more than promised ({{ "{:,.0f}".format(cost.promised) }}&euro;). Double-check these numbers.</span>
+  </div>
+  {% endif %}
+
+  {% if money and money.total > 0 %}
+  <div class="mt-4 grid grid-cols-[auto_auto_1fr] gap-x-4 gap-y-1 items-baseline">
+    <span class="text-orange-600 font-semibold">Trip cost</span>
+    <span class="text-orange-600 font-semibold text-right tabular-nums">{{ "{:,.2f}".format(money.total) }}&euro;</span>
+    <span class="text-gray-500">✈️ {{ "{:,.0f}".format(money.flight or 0) }} · 🏨 {{ "{:,.0f}".format(money.hotel or 0) }}{% if money.extra %} · ➕ {{ "{:,.0f}".format(money.extra) }}{% if cost.extra_note %} {{ cost.extra_note }}{% endif %}{% endif %}, what I'd spend alone</span>
+
+    {% if money.organizer_items %}
+    <span class="text-green-700 font-semibold">Organizers booked</span>
+    <span class="text-green-700 font-semibold text-right tabular-nums">{{ "{:,.2f}".format(money.organizer_booked) }}&euro;</span>
+    <span class="text-gray-500">{{ money.organizer_items | map('replace', 'flight', '✈️ flight') | map('replace', 'hotel', '🏨 hotel') | join(' · ') }}{% if money.organizer_booking %}, {{ "{:,.0f}".format(money.organizer_booking) }}&euro; still to come{% endif %}</span>
+    {% endif %}
+
+    {% if money.cash_promised or money.cash_covered %}
+    <span class="text-blue-700 font-semibold">Cash</span>
+    <span class="text-blue-700 font-semibold text-right tabular-nums">{{ "{:,.2f}".format(money.cash_covered or 0) }}&euro;</span>
+    <span class="text-gray-500">paid of {{ "{:,.0f}".format(money.cash_promised or 0) }}&euro; promised{% if cost.paid_on %} on {{ cost.paid_on.strftime('%d. %b %Y') }}{% endif %}{% if money.cash_refused %}, <span class="text-red-600 font-semibold">refused</span>{% if cost.note %}: {{ cost.note }}{% endif %}{% elif money.owed %}, <span class="text-amber-700 font-semibold">{{ "{:,.0f}".format(money.owed) }}&euro; owed</span>{% endif %}</span>
+    {% endif %}
+
+    <span class="bg-gray-100 text-gray-800 font-bold px-2 rounded">Out of pocket</span>
+    <span class="text-gray-800 font-bold text-right tabular-nums">{{ "{:,.2f}".format(money.out_of_pocket) }}&euro;</span>
+    <span class="text-gray-500">{% if money.out_of_pocket_after_promised != money.out_of_pocket %}{{ "{:,.0f}".format(money.out_of_pocket_after_promised) }}&euro; once everything promised lands{% endif %}</span>
+  </div>
+  {% endif %}
+</form>
+{% endmacro %}

@@ -61,6 +61,13 @@
     <div class="text-gray-400">📅 Conference</div>
     <div class="text-gray-900">{{ conf_start.strftime('%d. %b') }}{% if conf_end and conf_end != conf_start %} – {{ conf_end.strftime('%d. %b') }}{% endif %} {{ conf_start.year }}</div>
     {% endif %}
+    {% set travel_entry = conf.years.get(ne.edition_year) if ne and ne.edition_year else none %}
+    {% if travel_entry and travel_entry.status == 'accepted' %}
+    {% for item, booking in travel_entry.bookings.items() %}
+    <div class="text-gray-400">{{ '✈️ Flight' if item == 'flight' else '🏨 Hotel' }}</div>
+    <div class="{% if booking.status == 'done' %}text-green-600{% elif booking.status == 'waiting' %}text-blue-600{% else %}text-amber-700 font-medium{% endif %}">{{ booking.summary }}</div>
+    {% endfor %}
+    {% endif %}
     {% if (cfp_open or cfp_close) and today %}
     <div class="text-gray-400">📝 CFP</div>
     <div>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "components/difficulty.html" import difficulty_icon, size_icon %}
 {% from "components/talk_status_select.html" import talk_status_select %}
-{% from "components/cost_form.html" import cost_form %}
+{% from "components/travel_cost_form.html" import travel_cost_form %}
 
 {% block content %}
 <div class="mb-4 flex items-center justify-between">
@@ -214,8 +214,8 @@
     <button type="submit" class="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">Save</button>
   </form>
 
-  <!-- Cost -->
-  {{ cost_form(year_entry.cost, year, conf.name) }}
+  <!-- Travel & cost -->
+  {{ travel_cost_form(year_entry, year, conf.name, bookers, booking_statuses) }}
 </div>
 {% else %}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -261,8 +261,8 @@
       <span class="text-gray-400">{{ other_entry.conference_start.strftime('%d %b') }}{% if other_entry.conference_end %} - {{ other_entry.conference_end.strftime('%d %b') }}{% endif %}</span>
       {% endif %}
       {% if other_entry.vacation_days %}<span class="text-gray-400">{{ other_entry.vacation_days }} vacation day{{ 's' if other_entry.vacation_days != 1 }}</span>{% endif %}
-      {% if other_entry.cost and other_entry.cost.total > 0 %}
-      <span class="text-orange-500">{{ "{:,.0f}".format(other_entry.cost.total) }}&euro;</span>
+      {% if other_entry.money and other_entry.money.total > 0 %}
+      <span class="text-orange-500">{{ "{:,.0f}".format(other_entry.money.total) }}&euro;</span>
       {% if other_entry.cost.covered %}<span class="text-green-600">{{ "{:,.0f}".format(other_entry.cost.covered) }}&euro; covered</span>{% endif %}
       {% endif %}
     </div>
@@ -281,7 +281,7 @@
     {% endfor %}
     {% if other_entry.status and other_entry.status not in ('rejected', 'withdrawn') %}
     <div class="mt-3 ml-4">
-      {{ cost_form(other_entry.cost, other_year, conf.name) }}
+      {{ travel_cost_form(other_entry, other_year, conf.name, bookers, booking_statuses) }}
     </div>
     {% endif %}
   </div>

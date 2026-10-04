@@ -300,13 +300,14 @@ def reimbursements_owed(conferences: list[Conference]) -> tuple[list[OwedItem], 
 
     for conf in conferences:
         for year, entry in (conf.years or {}).items():
-            if entry is None or entry.cost is None or not entry.cost.owed:
+            money = entry.money if entry else None
+            if money is None or not money.owed:
                 continue
             owed.append(
                 OwedItem(
                     name=conf.name,
                     year=year,
-                    amount=entry.cost.owed,
+                    amount=money.owed,
                     country_code=conf.country_code,
                 )
             )

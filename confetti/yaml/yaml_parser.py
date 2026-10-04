@@ -103,16 +103,19 @@ def _load_and_validate_conferences() -> tuple[list[Conference], list[ConfError]]
                 )
 
             # #4: Accepted talks → cost required
-            if entry.status == TalkStatus.accepted and not entry.cost:
+            if entry.status == TalkStatus.accepted and entry.money is None:
                 all_errors.append(
                     ConfError(
                         conf.filename,
                         conf.name,
                         [
                             f"Year {year} has accepted talks but no cost. Add:\n"
-                            f"      cost:\n"
+                            f"      travel:\n"
                             f"        flight:\n"
+                            f"          cost:\n"
                             f"        hotel:\n"
+                            f"          cost:\n"
+                            f"      cost:\n"
                             f"        extra:\n"
                             f"        covered:"
                         ],
