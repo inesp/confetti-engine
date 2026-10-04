@@ -51,11 +51,18 @@
       conference_start: 2025-09-18
       conference_end: 2025-09-19
       cost:
-        flight: 110
-        hotel: 220
         extra: 70
         promised: 450
         covered: 450
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 110
+        hotel:
+          by: me
+          status: done
+          cost: 220
       vacation_days: 1
       talks:
         - talk: example-testing
@@ -70,11 +77,18 @@
       conference_start: 2026-09-18
       conference_end: 2026-09-19
       cost:
-        flight: 130
-        hotel: 240
         extra: 80
         promised: 500
         covered: 500
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 130
+        hotel:
+          by: me
+          status: done
+          cost: 240
       vacation_days: 2
       talks:
         - talk: example-async

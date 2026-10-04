@@ -29,11 +29,18 @@
       conference_start: 2026-09-22
       conference_end: 2026-09-23
       cost:
-        flight: 260
-        hotel: 400
         extra: 120
         promised: 400
         covered: 400
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 260
+        hotel:
+          by: me
+          status: done
+          cost: 400
       vacation_days: 2
       talks:
         - talk: example-observability

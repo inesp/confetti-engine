@@ -29,11 +29,18 @@
       conference_start: 2025-11-06
       conference_end: 2025-11-07
       cost:
-        flight: 105
-        hotel: 210
         extra: 55
         promised: 300
         covered: 300
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 105
+        hotel:
+          by: me
+          status: done
+          cost: 210
       vacation_days: 1
       talks:
         - talk: example-refactoring
@@ -48,11 +55,18 @@
       conference_start: 2026-11-06
       conference_end: 2026-11-07
       cost:
-        flight: 120
-        hotel: 250
         extra: 60
         promised: 300
         covered: 300
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 120
+        hotel:
+          by: me
+          status: done
+          cost: 250
       vacation_days: 1
       talks:
         - talk: example-async

@@ -41,12 +41,25 @@
        notify: "Decisions by 5 Apr"  # optional — free text: when/how you hear back
        conference_start: 2027-06-05  # optional
        conference_end: 2027-06-06 # optional
-       cost:                        # optional — costs in EUR
-         flight:                   # flight cost
-         hotel:                    # hotel cost
+       travel:                      # optional — who books the flight and hotel, and whose move it is
+         flight:
+           by: organizer           # me / organizer
+           status: waiting         # todo (my move) / waiting (their move) / done
+           cost:                   # flight cost in EUR
+           ping_on: 2027-05-01     # optional — when to nag them if still waiting
+           note: "sent travel details"  # optional
+         hotel:
+           by: me
+           status: done
+           cost:                   # hotel cost in EUR
+       cost:                        # optional — money not tied to one booking, in EUR
          extra:                    # other costs (food, transport, etc.)
-         promised:                 # amount the conference committed to cover
-         covered:                  # amount actually covered / landed
+         extra_note:               # optional — what the extra was
+         promised:                 # cash the conference committed to pay back
+         covered:                  # cash actually paid back
+         paid_on:                  # optional — when the cash landed
+         refused: false            # optional — true when they promised cash and then refused to pay
+         note:                     # optional — about the cash: when promised, why refused
        vacation_days: 0           # how many vacation days for this conference
        talks:                     # optional — talk submissions for this year
          - talk: my-talk-id       # references id from talks/talks.yml

@@ -31,11 +31,18 @@
       conference_start: 2025-06-11
       conference_end: 2025-06-12
       cost:
-        flight: 140
-        hotel: 280
         extra: 60
         promised: 480
         covered: 480
+      travel:
+        flight:
+          by: me
+          status: done
+          cost: 140
+        hotel:
+          by: me
+          status: done
+          cost: 280
       vacation_days: 1
       talks:
         - talk: example-async
