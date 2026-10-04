@@ -55,6 +55,25 @@
 </div>
 {% endif %}
 
+{% if travel_nags %}
+<div class="bg-sky-50 rounded-lg shadow-sm border border-sky-200 p-6 mb-6">
+  <h3 class="text-lg font-semibold text-sky-900 mb-4">Travel to sort out</h3>
+  <div class="space-y-2">
+    {% for nag in travel_nags %}
+      <div class="flex items-center justify-between gap-4 bg-white border border-sky-200 rounded px-4 py-3">
+        <div>
+          <span class="text-gray-900 font-medium">{{ nag.message }}</span>
+          <span class="text-gray-500">for</span>
+          <a href="{{ url_for('conferences.detail', conf_name=nag.name) }}" class="text-gray-900 font-medium hover:text-blue-700 hover:underline">{{ nag.name }} &#9998;</a>
+          {% if nag.note %}<div class="text-gray-500 mt-1">{{ nag.note }}</div>{% endif %}
+        </div>
+        <span class="text-sky-900 flex-shrink-0">{{ nag.conference_start.strftime('%d. %b') }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% if owed %}
 <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6 mb-6">
   <div class="flex items-center justify-between mb-4">

@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint
 from flask import render_template
 from flask import session
@@ -11,6 +13,7 @@ from pathlib import Path
 from confetti.google.auth import TokenRefreshError
 from confetti.talks import load_talk_descriptions
 from confetti.views.conf_stats import reimbursements_owed
+from confetti.views.travel import travel_nags
 from confetti.yaml.yaml_parser import ConfError
 from confetti.yaml.yaml_parser import ErrorLevel
 from confetti.yaml.yaml_parser import load_and_validate_conferences
@@ -23,6 +26,7 @@ home_bp = Blueprint("home", __name__)
 def index():
     conferences, errors = load_and_validate_conferences()
     owed, owed_total = reimbursements_owed(conferences)
+    nags = travel_nags(conferences, date.today())
     talks = load_talks()
     talk_descriptions = load_talk_descriptions()
 
@@ -62,6 +66,7 @@ def index():
         conferences=conferences,
         owed=owed,
         owed_total=owed_total,
+        travel_nags=nags,
         validation_errors=errors,
         talks=talks,
         talk_descriptions=talk_descriptions,
