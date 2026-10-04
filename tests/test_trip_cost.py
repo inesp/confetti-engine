@@ -4,7 +4,9 @@ from confetti.models import (
     Booker,
     Booking,
     BookingStatus,
+    Conference,
     Cost,
+    RefusedPayment,
     Travel,
     TripCost,
     YearEntry,
@@ -79,3 +81,12 @@ def test_refused_cash_is_not_owed_and_not_promised():
     assert money is not None
     result = (money.promised, money.owed, money.out_of_pocket_after_promised)
     assert result == (0, 0, 300)
+
+
+def test_conference_remembers_refused_payments():
+    conf = Conference(
+        filename="test.yaml", name="Conf", city="Test", country="Netherlands", website="https://example.com"
+    )
+    conf.years[2025] = YearEntry(cost=Cost(promised=600, covered=100, refused=True, note="never replied"))
+    result = conf.refused_payments
+    assert result == [RefusedPayment(year=2025, amount=500, note="never replied")]

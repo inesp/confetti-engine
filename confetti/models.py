@@ -216,6 +216,13 @@ class Travel(BaseModel):
 
 
 @dataclass
+class RefusedPayment:
+    year: int
+    amount: float  # what they promised and never paid
+    note: str
+
+
+@dataclass
 class HistorySummary:
     applied: list[int]
     accepted: list[int]
@@ -364,6 +371,17 @@ class Conference(BaseModel):
         if not applied:
             return None
         return HistorySummary(applied=applied, accepted=accepted, notes=notes)
+
+    @property
+    def refused_payments(self) -> list[RefusedPayment]:
+        """Editions where they promised cash and then refused to pay, newest first. Marks the whole conference."""
+        refused: list[RefusedPayment] = []
+        for year, entry in sorted(self.years.items(), reverse=True):
+            if entry is None or entry.cost is None or not entry.cost.refused:
+                continue
+            amount = max((entry.cost.promised or 0) - (entry.cost.covered or 0), 0)
+            refused.append(RefusedPayment(year=year, amount=round(amount, 2), note=entry.cost.note))
+        return refused
 
     @property
     def filepath(self) -> Path:

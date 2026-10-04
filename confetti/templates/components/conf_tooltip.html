@@ -26,6 +26,11 @@
     <a href="{{ conf.website }}" target="_blank" class="text-blue-500 hover:underline font-semibold">{{ favorite_star(conf) }}{{ conf.name }}</a>
     <a href="{{ url_for('conferences.detail', conf_name=conf.name) }}" class="text-blue-500 hover:underline text-sm flex-shrink-0">Details &#9998;</a>
   </div>
+  {% for refusal in conf.refused_payments %}
+  <div class="mb-3 bg-red-50 border border-red-300 text-red-800 rounded px-3 py-2">
+    <span class="font-semibold">⚠️ Refused to pay{% if refusal.amount %} {{ "{:,.0f}".format(refusal.amount) }}&euro;{% endif %} in {{ refusal.year }}</span>{% if refusal.note %}: {{ refusal.note }}{% endif %}
+  </div>
+  {% endfor %}
   <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-sm">
     <div class="text-gray-400">📍 Location</div>
     <div class="text-gray-900">{{ conf.city }}, {{ conf.country }}</div>
