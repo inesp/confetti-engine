@@ -72,10 +72,18 @@
       <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm bg-gray-200"></span> Skipped</span>
     </div>
   </div>
+  {# Skipped conferences sort last; a line across both columns sets them apart from the live ones #}
+  {% set active_count = cfp_bars | rejectattr('status', 'equalto', 'skipped') | list | length %}
+  {% set show_skip_line = 0 < active_count < cfp_bars | length %}
+  {% set skip_gap = 24 if show_skip_line else 0 %}
   <div class="flex">
     <!-- Label column -->
     <div class="w-64 flex-shrink-0 relative z-10 bg-white" style="padding-top: 20px;">
+      {% if show_skip_line %}
+      <div class="absolute left-0 right-0 border-t border-gray-300 pointer-events-none" style="top: {{ active_count * 32 + 18 + skip_gap // 2 }}px;"></div>
+      {% endif %}
       {% for bar in cfp_bars %}
+      {% if show_skip_line and loop.index0 == active_count %}<div style="height: {{ skip_gap }}px;"></div>{% endif %}
       <div class="flex items-center gap-1.5 pr-3 relative group/clabel" style="height: 32px;">
         {{ favorite_star(bar.conf) }}
         {{ difficulty_icon(bar.conf.difficulty, 14) }}
@@ -89,7 +97,7 @@
       {% endfor %}
     </div>
     <!-- Bar area -->
-    <div class="flex-grow relative" style="height: {{ cfp_bars|length * 32 + 20 }}px;">
+    <div class="flex-grow relative" style="height: {{ cfp_bars|length * 32 + 20 + skip_gap }}px;">
       <!-- Month markers -->
       {% for m in cfp_months %}
       <div class="absolute top-0 bottom-0 border-l border-dashed border-gray-200" style="left: {{ m.position_pct }}%;">
@@ -102,37 +110,42 @@
         <span class="absolute text-blue-600 font-semibold" style="font-size: 11px; top: 0; left: 4px;">today</span>
       </div>
 
+      {% if show_skip_line %}
+      <div class="absolute left-0 right-0 border-t border-gray-300 pointer-events-none" style="top: {{ active_count * 32 + 18 + skip_gap // 2 }}px;"></div>
+      {% endif %}
+
       <!-- Bars -->
       {% for bar in cfp_bars %}
       {% set bar_end = bar.left_pct + bar.width_pct %}
+      {% set row_top = loop.index0 * 32 + 24 + (skip_gap if loop.index0 >= active_count else 0) %}
       <div class="absolute rounded-md cursor-default group/cfpbar
         {% if bar.status == 'skipped' %}bg-gray-200
         {% elif bar.status == 'accepted' %}bg-green-500
         {% elif bar.status == 'submitted' %}bg-green-300
         {% elif bar.status == 'known' %}bg-purple-400
         {% else %}bg-purple-200{% endif %}"
-        style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; min-width: 6px;"
+        style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; top: {{ row_top }}px; height: 20px; min-width: 6px;"
       >
         {% call hover_popup(position="above", align="right" if bar.left_pct > 50 else "left", group_name="group/cfpbar", z="z-20") %}
           {{ conf_tooltip(bar.conf, today=today) }}
         {% endcall %}
       </div>
       {% if bar.open_badge %}
-      <div class="absolute flex items-center pointer-events-none z-10" style="left: calc({{ cfp_today_pct }}% + 5px); top: {{ loop.index0 * 32 + 24 }}px; height: 20px;">
+      <div class="absolute flex items-center pointer-events-none z-10" style="left: calc({{ cfp_today_pct }}% + 5px); top: {{ row_top }}px; height: 20px;">
         <span class="rounded-full px-1.5 font-semibold leading-4 {% if bar.open_badge == 'open' %}bg-green-600 text-white{% else %}bg-green-100 text-green-800 border border-green-400{% endif %}" style="font-size: 11px;">{{ bar.open_badge }}</span>
       </div>
       {% endif %}
       {% set star_after = bar.conf.favorite and bar_end < 93 %}
       {% if bar.conf.favorite and bar.left_pct > 3 %}
-      <div class="absolute flex items-center pointer-events-none" style="right: calc({{ 100 - bar.left_pct }}% + 4px); top: {{ loop.index0 * 32 + 24 }}px; height: 20px;">{{ favorite_star(bar.conf, 13) }}</div>
+      <div class="absolute flex items-center pointer-events-none" style="right: calc({{ 100 - bar.left_pct }}% + 4px); top: {{ row_top }}px; height: 20px;">{{ favorite_star(bar.conf, 13) }}</div>
       {% endif %}
       {% if star_after %}
-      <div class="absolute flex items-center pointer-events-none" style="left: {{ bar_end }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; padding-left: 4px;">{{ favorite_star(bar.conf, 13) }}</div>
+      <div class="absolute flex items-center pointer-events-none" style="left: {{ bar_end }}%; top: {{ row_top }}px; height: 20px; padding-left: 4px;">{{ favorite_star(bar.conf, 13) }}</div>
       {% endif %}
       {% if bar_end <= 88 %}
-      <div class="absolute flex items-center text-gray-500 pointer-events-none" style="left: {{ bar_end }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; font-size: 11px; padding-left: {{ '52px' if bar.open_badge and bar_end - cfp_today_pct < 5 else ('24px' if star_after else '6px') }}; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
+      <div class="absolute flex items-center text-gray-500 pointer-events-none" style="left: {{ bar_end }}%; top: {{ row_top }}px; height: 20px; font-size: 11px; padding-left: {{ '52px' if bar.open_badge and bar_end - cfp_today_pct < 5 else ('24px' if star_after else '6px') }}; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
       {% else %}
-      <div class="absolute flex items-center justify-end text-gray-600 pointer-events-none" style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; top: {{ loop.index0 * 32 + 24 }}px; height: 20px; font-size: 11px; padding-right: 5px; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
+      <div class="absolute flex items-center justify-end text-gray-600 pointer-events-none" style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; top: {{ row_top }}px; height: 20px; font-size: 11px; padding-right: 5px; white-space: nowrap;">{{ bar.cfp_close.strftime('%d %b') }}</div>
       {% endif %}
       {% endfor %}
     </div>
