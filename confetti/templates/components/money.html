@@ -1,3 +1,8 @@
 {% macro money() %}
 <span class="money">{{ caller() }}</span>
 {% endmacro %}
+
+{# One money format everywhere on a page: whole euros with a thousands comma, rounded not truncated. #}
+{% macro eur(value) -%}
+{{ "{:,.0f}".format(value or 0) }}€
+{%- endmacro %}

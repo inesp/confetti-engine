@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "components/difficulty.html" import difficulty_icon, size_icon %}
 {% from "components/conf_tooltip.html" import conf_tooltip, hover_popup %}
-{% from "components/money.html" import money %}
+{% from "components/money.html" import money, eur %}
 
 {% macro box_colour(status) %}
 {%- if status == 'accepted' -%}bg-green-500 border-green-600
@@ -56,7 +56,7 @@
       <div class="flex items-baseline gap-3 mb-3">
         <h4 class="text-lg font-bold text-indigo-600">{{ year }}</h4>
         {% set ys = year_summaries[year] %}
-        <span class="text-gray-500">{{ ys.conf_count }} conference{{ 's' if ys.conf_count != 1 }} · {{ ys.vacation_days }} vacation day{{ 's' if ys.vacation_days != 1 }}{% if ys.total > 0 %} · {% call money() %}{{ ys.total|int }}€ total · <span class="relative group/oop cursor-default">{{ ys.out_of_pocket|int }}€ out of pocket<div class="hidden group-hover/oop:block absolute left-0 top-full pt-1 z-10"><div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">{% for pc in confs %}{% if pc.cost %}<div>{{ pc.conf.name }}: {{ pc.cost.out_of_pocket|int }}€</div>{% endif %}{% endfor %}</div></div></span>{% if ys.out_of_pocket_after_promised != ys.out_of_pocket %} now · {{ ys.out_of_pocket_after_promised|int }}€ once promised {% endif %}{% endcall %}{% endif %}</span>
+        <span class="text-gray-500">{{ ys.conf_count }} conference{{ 's' if ys.conf_count != 1 }} · {{ ys.vacation_days }} vacation day{{ 's' if ys.vacation_days != 1 }}{% if ys.total > 0 %} · {% call money() %}{{ eur(ys.total) }} total · <span class="relative group/oop cursor-default">{{ eur(ys.out_of_pocket) }} out of pocket<div class="hidden group-hover/oop:block absolute left-0 top-full pt-1 z-10"><div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">{% for pc in confs %}{% if pc.cost %}<div>{{ pc.conf.name }}: {{ eur(pc.cost.out_of_pocket) }}</div>{% endif %}{% endfor %}</div></div></span>{% if ys.out_of_pocket_after_promised != ys.out_of_pocket %} now · {{ eur(ys.out_of_pocket_after_promised) }} once promised {% endif %}{% endcall %}{% endif %}{% set upcoming = confs | selectattr('conference_start') | selectattr('conference_start', 'gt', today) | list | length %}{% if upcoming %} · {{ upcoming }} still to come{% endif %}</span>
       </div>
 
       {% set dots, months = year_dots[year] %}
@@ -81,10 +81,13 @@
         {% for pc in confs %}
         {% set is_future = pc.conference_start and pc.conference_start > today %}
         <div class="rounded-lg border-[3px] {% if is_future %}border-green-200 bg-white{% else %}border-green-300 bg-white{% endif %}">
-          <div class="{% if is_future %}bg-green-50{% else %}bg-green-100{% endif %} px-3 py-2">
+          <div class="{% if is_future %}bg-green-50{% else %}bg-green-100{% endif %} px-3 py-2 flex items-start gap-2">
+            <div class="flex-grow">
             <a href="{{ pc.conf.website }}" target="_blank" class="font-semibold {% if is_future %}text-gray-500{% else %}text-green-900{% endif %} hover:text-green-600">{{ pc.conf.name }}</a>
             {{ size_icon(pc.conf) }}
             <a href="{{ url_for('conferences.detail', conf_name=pc.conf.name) }}" class="text-gray-400 hover:text-blue-600 ml-1" title="Details">&#9998;</a>
+            </div>
+            {% if is_future %}<span class="flex-shrink-0 text-green-700 bg-white border border-green-300 rounded-full px-2">upcoming</span>{% endif %}
           </div>
           <div class="px-3 py-2">
             <div class="{% if is_future %}text-gray-400{% else %}text-gray-700{% endif %}">
@@ -106,18 +109,24 @@
             <div class="mt-2 pt-2 border-t border-green-200 {% if is_future %}text-gray-400{% else %}text-gray-600{% endif %} relative group/cost">
               {% call money() %}
               {% if pc.cost %}
-              💰 {{ pc.cost.total }}€ · {{ pc.cost.covered or 0 }}€ covered{% if pc.cost.promised != pc.cost.covered %} <span class="text-gray-400">(of {{ pc.cost.promised|int }}€ promised)</span>{% endif %}{% if pc.cost.owed %} <span class="text-amber-600">· {{ pc.cost.owed|int }}€ owed</span>{% endif %}
+              {% set trip = pc.cost %}
+              <div>💰 {{ eur(trip.total) }} trip · <span class="font-semibold">{{ eur(trip.out_of_pocket) }} out of pocket</span></div>
+              {% if trip.organizer_items %}
+              <div>🎟️ {{ eur(trip.organizer_booked) }} booked by organizers{% if trip.organizer_booking %} <span class="text-amber-600">· {{ eur(trip.organizer_booking) }} still to come</span>{% endif %}</div>
+              {% endif %}
+              {% if trip.cash_promised or trip.cash_covered %}
+              <div>💶 {{ eur(trip.cash_covered) }} cash paid of {{ eur(trip.cash_promised) }}{% if trip.cash_refused %} <span class="text-red-600 font-semibold">· refused</span>{% elif trip.owed %} <span class="text-amber-600">· {{ eur(trip.owed) }} owed</span>{% endif %}</div>
+              {% endif %}
               {% call hover_popup(position="above", group_name="group/cost") %}
                 <div class="bg-gray-800 text-white rounded px-3 py-2 whitespace-nowrap">
-                  ✈️ Flight: {{ pc.cost.flight or 0 }}€{% if 'flight' in pc.cost.organizer_items %} (organizers){% endif %} · 🏨 Hotel: {{ pc.cost.hotel or 0 }}€{% if 'hotel' in pc.cost.organizer_items %} (organizers){% endif %}{% if pc.cost.extra %} · ➕ Extra: {{ pc.cost.extra }}€{% endif %}
-                  {% if pc.cost.cash_promised %}<div>💶 Cash: {{ pc.cost.cash_covered or 0 }}€ paid of {{ pc.cost.cash_promised }}€{% if pc.cost.cash_refused %}, refused{% endif %}</div>{% endif %}
+                  ✈️ Flight: {{ eur(trip.flight) }}{% if 'flight' in trip.organizer_items %} (organizers){% endif %} · 🏨 Hotel: {{ eur(trip.hotel) }}{% if 'hotel' in trip.organizer_items %} (organizers){% endif %}{% if trip.extra %} · ➕ Extra: {{ eur(trip.extra) }}{% endif %}
                 </div>
               {% endcall %}
               {% else %}
               ⚠️ Cost missing
               {% endif %}
               {% endcall %}
-              📅 Vacation: {{ pc.vacation_days }}
+              <div>📅 {{ pc.vacation_days }} vacation day{{ "s" if pc.vacation_days != 1 }}</div>
             </div>
           </div>
         </div>

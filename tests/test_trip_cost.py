@@ -64,12 +64,33 @@ def test_organizer_booking_counts_as_promised_and_covered():
     assert result == (1000, 950, 700, 250, 300)
 
 
-def test_pending_organizer_booking_is_promised_not_covered():
+def test_pending_organizer_booking_is_not_my_money():
     entry = YearEntry(travel=Travel(hotel=Booking(by=Booker.organizer, status=BookingStatus.waiting, cost=120)))
     money = entry.money
     assert money is not None
-    result = (money.promised, money.covered, money.owed, money.out_of_pocket_after_promised)
-    assert result == (120, 0, 0, 0)
+    result = (money.promised, money.covered, money.owed, money.out_of_pocket, money.organizer_booking)
+    assert result == (120, 120, 0, 0, 120)
+
+
+def _i_book_they_pay_back(paid: float | None) -> YearEntry:
+    return YearEntry(
+        travel=Travel(flight=Booking(status=BookingStatus.done, cost=310)),
+        cost=Cost(promised=310, covered=paid),
+    )
+
+
+def test_payback_not_landed_is_my_money_and_owed():
+    money = _i_book_they_pay_back(paid=None).money
+    assert money is not None
+    result = (money.total, money.out_of_pocket, money.owed, money.out_of_pocket_after_promised)
+    assert result == (310, 310, 310, 0)
+
+
+def test_payback_landed_clears_out_of_pocket():
+    money = _i_book_they_pay_back(paid=310).money
+    assert money is not None
+    result = (money.total, money.out_of_pocket, money.owed)
+    assert result == (310, 0, 0)
 
 
 def test_refused_cash_is_not_owed_and_not_promised():

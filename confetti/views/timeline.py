@@ -204,7 +204,7 @@ def build_year_summaries(years: dict[int, list[PastConference]]) -> dict[int, Ye
             summary.hotel += pc.cost.hotel or 0
             summary.extra += pc.cost.extra or 0
             summary.covered += pc.cost.effective_covered
-            summary.organizer_booked += pc.cost.organizer_booked
+            summary.organizer_booked += pc.cost.organizer_booked + pc.cost.organizer_booking
             summary.promised += min(pc.cost.promised or 0, conf_total)
         summary.flight = round(summary.flight, 2)
         summary.hotel = round(summary.hotel, 2)

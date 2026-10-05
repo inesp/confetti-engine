@@ -151,7 +151,11 @@ class TripCost:
 
     @property
     def covered(self) -> float:
-        return round(self.organizer_booked + (self.cash_covered or 0), 2)
+        """Everything that isn't my money: whatever the organizers book (done or still to come) plus cash paid back.
+
+        A booking the organizers haven't made yet was never paid by me, so it can't sit in my out of pocket.
+        """
+        return round(self.organizer_booked + self.organizer_booking + (self.cash_covered or 0), 2)
 
     @property
     def effective_covered(self) -> float:
