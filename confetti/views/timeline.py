@@ -4,6 +4,7 @@ from datetime import timedelta
 from enum import StrEnum, auto
 
 from confetti.conference_view import ConferenceTimeline
+from confetti.constants import CFP_ESTIMATED_DURATION
 from confetti.conference_view import KanbanColumn
 from confetti.models import Conference, TalkEntry, TalkStatus, TripCost
 
@@ -273,6 +274,11 @@ def build_cfp_gantt(
         next_event = conf.next_event
         cfp_open = next_event.cfp_open
         cfp_close = next_event.cfp_close
+        # Never drop a row for a missing end: make one up from the other, the house way (a CFP runs 60 days).
+        if cfp_open and cfp_close is None:
+            cfp_close = cfp_open + CFP_ESTIMATED_DURATION
+        if cfp_close and cfp_open is None:
+            cfp_open = cfp_close - CFP_ESTIMATED_DURATION
         if cfp_open is None or cfp_close is None:
             continue
         # Keep only CFP windows that overlap [today, range_end].

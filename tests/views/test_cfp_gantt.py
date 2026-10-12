@@ -245,3 +245,11 @@ def test_cfp_already_submitted_to_has_no_badge():
     )
     result = _bars([conf])[0].open_badge
     assert result is None
+
+
+@freeze_time("2026-07-09")
+def test_conference_date_only_still_gets_a_bar():
+    conf = _conf("Conf", years={2027: YearEntry(conference_start=date(2027, 2, 1))})
+    bar = _bars([conf])[0]
+    result = (bar.cfp_open, bar.cfp_close, bar.status)
+    assert result == (date(2026, 8, 5), date(2026, 10, 4), CfpBarStatus.guess)

@@ -441,6 +441,16 @@ class Conference(BaseModel):
 
         return None
 
+    def _guess_close_after(self, cfp_open: date, edition_year: int, event: NextEvent) -> date:
+        """A factual open with no published close: the presumed close if it fits after the open, else the usual run."""
+        if self.cfp:
+            presumed_close = self.cfp.build_cfp_close(edition_year)
+            if presumed_close and event.conference_start and presumed_close >= event.conference_start:
+                presumed_close = self.cfp.build_cfp_close(edition_year - 1)
+            if presumed_close and presumed_close > cfp_open:
+                return presumed_close
+        return cfp_open + CFP_ESTIMATED_DURATION
+
     def _resolve_next_cfp(self, today: date, event: NextEvent, edition_year: int | None) -> None:
         if edition_year is None:
             return
@@ -451,7 +461,7 @@ class Conference(BaseModel):
             event.notify = entry.notify
             if entry.cfp_open:
                 event.cfp_open = entry.cfp_open
-                event.cfp_close = entry.cfp_close
+                event.cfp_close = entry.cfp_close or self._guess_close_after(entry.cfp_open, edition_year, event)
                 event.cfp_open_is_factual = True
                 event.cfp_close_is_factual = entry.cfp_close is not None
                 return
