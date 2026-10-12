@@ -157,7 +157,7 @@ def year_stats_lines(conferences: list[Conference]) -> list[str]:
     lines = [
         "## Conference submissions per year",
         "",
-        "The year is the one the CFP closed in - when I did the submitting, not when the conference happened.",
+        "The year is the one the conference happens in, not when I did the submitting.",
         "A waitlist counts as a rejection; anything still waiting for an answer counts as nothing at all.",
         "",
     ]

@@ -80,7 +80,7 @@ def test_save_talk_stats_ends_with_the_yearly_submission_stats(tmp_path, monkeyp
     result = (tmp_path / "talk_stats.md").read_text()
     assert result.endswith("""## Conference submissions per year
 
-The year is the one the CFP closed in - when I did the submitting, not when the conference happened.
+The year is the one the conference happens in, not when I did the submitting.
 A waitlist counts as a rejection; anything still waiting for an answer counts as nothing at all.
 
 | Year | Accepted | Rejected | Withdrawn | Waiting | Rate      | Without withdrawn |

@@ -73,7 +73,6 @@ class SubmissionBox:
     status: TalkStatus
     talks: list[str]
     cfp_close: date
-    cfp_year: int
     cfp_close_is_factual: bool
 
     @property
@@ -112,7 +111,6 @@ def build_submissions(conferences: list[Conference]) -> list[SubmissionBox]:
                     status=outcome,
                     talks=outcome_talks(entry, outcome),
                     cfp_close=close_date,
-                    cfp_year=close_date.year,
                     cfp_close_is_factual=entry.cfp_close is not None,
                 )
             )
@@ -169,17 +167,17 @@ class SubmissionTally:
 
 @dataclass
 class YearSubmissions(SubmissionTally):
-    """One year of submissions, the year being the one the CFP closed in - when I did the submitting."""
+    """One year of submissions, the year being the one the conference happens in."""
 
     year: int = 0
 
 
 def submissions_by_year(submissions: list[SubmissionBox]) -> list[YearSubmissions]:
-    """The same submissions sliced by the year their CFP closed, most recent year first."""
+    """The same submissions sliced by conference year, most recent year first."""
     by_year: dict[int, YearSubmissions] = {}
 
     for box in submissions:
-        by_year.setdefault(box.cfp_year, YearSubmissions(year=box.cfp_year)).boxes.append(box)
+        by_year.setdefault(box.year, YearSubmissions(year=box.year)).boxes.append(box)
 
     return [by_year[year] for year in sorted(by_year, reverse=True)]
 

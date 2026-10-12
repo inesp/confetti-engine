@@ -16,8 +16,8 @@ def _years(confs: list[Conference]) -> list:
     return submissions_by_year(build_submissions(confs))
 
 
-def _boxes(confs: list[Conference]) -> dict[int, list[str]]:
-    return {year_subs.year: [box.name for box in year_subs.boxes] for year_subs in _years(confs)}
+def _close_dates(confs: list[Conference]) -> list[tuple[str, date]]:
+    return [(box.name, box.cfp_close) for box in build_submissions(confs)]
 
 
 def _conf(name: str, years: dict[int, YearEntry], cfp: Cfp | None = None) -> Conference:
@@ -123,8 +123,8 @@ def test_acceptance_by_year_carries_the_conferences_behind_the_number():
     ]
 
 
-def test_acceptance_year_is_the_cfp_close_year_not_the_conference_year():
-    """Bitbash bug: a CFP that closed in 2025 counts towards 2025, even though the conference is 2026."""
+def test_acceptance_year_is_the_conference_year_not_the_cfp_close_year():
+    """A CFP that closed in 2025 counts towards 2026, the year I actually go to the conference."""
     confs = [
         _conf(
             "Bitbash",
@@ -148,7 +148,7 @@ def test_acceptance_year_is_the_cfp_close_year_not_the_conference_year():
         ),
     ]
     result = _years(confs)
-    assert [(y.year, y.accepted, y.total, y.rate) for y in result] == [(2025, 1, 2, 50)]
+    assert [(y.year, y.accepted, y.total, y.rate) for y in result] == [(2026, 0, 1, 0), (2025, 1, 1, 100)]
 
 
 def test_the_year_strip_and_the_year_rate_count_the_same_submissions():
@@ -206,7 +206,7 @@ def test_submission_box_lists_every_rejection_including_sidelined():
     assert [box.talks for box in result] == [["Talk 0", "Talk 1"]]
 
 
-def test_submission_boxes_use_the_factual_cfp_close_year():
+def test_submission_boxes_use_the_factual_cfp_close():
     confs = [
         _conf(
             "Conf",
@@ -217,8 +217,8 @@ def test_submission_boxes_use_the_factual_cfp_close_year():
             },
         )
     ]
-    result = _boxes(confs)
-    assert result == {2025: ["Conf"]}
+    result = _close_dates(confs)
+    assert result == [("Conf", date(2025, 10, 1))]
 
 
 def test_submission_boxes_fall_back_to_the_presumed_cfp_close():
@@ -229,8 +229,8 @@ def test_submission_boxes_fall_back_to_the_presumed_cfp_close():
             cfp=_cfp("06-30"),
         )
     ]
-    result = _boxes(confs)
-    assert result == {2026: ["Conf"]}
+    result = _close_dates(confs)
+    assert result == [("Conf", date(2026, 6, 30))]
 
 
 def test_presumed_close_after_the_conference_belongs_to_the_year_before():
@@ -241,8 +241,8 @@ def test_presumed_close_after_the_conference_belongs_to_the_year_before():
             cfp=_cfp("10-01"),
         )
     ]
-    result = _boxes(confs)
-    assert result == {2025: ["Conf"]}
+    result = _close_dates(confs)
+    assert result == [("Conf", date(2025, 10, 1))]
 
 
 def test_submission_boxes_guess_120_days_before_the_conference():
@@ -252,11 +252,12 @@ def test_submission_boxes_guess_120_days_before_the_conference():
         _conf("Early", {2026: YearEntry(conference_start=date(2026, 3, 1), talks=[TalkEntry(talk="b")])}),
         _conf("Older", {2025: YearEntry(conference_start=date(2025, 5, 1), talks=[TalkEntry(talk="c")])}),
     ]
-    result = _boxes(confs)
-    assert result == {
-        2026: ["Late"],
-        2025: ["Older", "Early"],
-    }
+    result = _close_dates(confs)
+    assert result == [
+        ("Older", date(2025, 1, 1)),
+        ("Early", date(2025, 11, 1)),
+        ("Late", date(2026, 7, 4)),
+    ]
 
 
 def test_pill_gradient_is_flat_when_every_year_landed_the_same():
