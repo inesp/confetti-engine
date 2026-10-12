@@ -345,7 +345,7 @@ def build_gantt(timeline: list[ConferenceTimeline], today: date) -> tuple[list[T
     for t in candidates:
         assert t.conf_start is not None
         conf_end = t.conf_end or t.conf_start
-        year_entry = t.conf.years.get(today.year)
+        year_entry = t.conf.years.get(t.talk_year or t.conf_start.year)
         status = str(year_entry.status) if year_entry and year_entry.status else "submitted"
         bars_raw.append((t.conf, t.conf_start, conf_end, status))
 
