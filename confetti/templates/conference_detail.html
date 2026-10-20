@@ -289,6 +289,38 @@
 </div>
 {% endif %}
 
+{% macro prose(text) %}
+{# Lines starting with "- " render as a list, any other line as its own paragraph #}
+{% for line in text.strip().splitlines() | map('trim') | select %}
+  {% if line.startswith('- ') %}
+  <div class="flex gap-3 py-2.5 {% if not loop.first %}border-t border-gray-100{% endif %}">
+    <span class="text-gray-300 select-none">&bull;</span>
+    <span>{{ line[2:] }}</span>
+  </div>
+  {% else %}
+  <p class="{% if not loop.first %}mt-3{% endif %}">{{ line }}</p>
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+
+{% if conf.topic_fit or conf.notes %}
+<!-- Topic fit and notes -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  {% if conf.topic_fit %}
+  <section id="topic-fit" class="scroll-mt-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">Topic fit</h3>
+    <div class="max-w-3xl font-serif text-gray-700 leading-relaxed">{{ prose(conf.topic_fit) }}</div>
+  </section>
+  {% endif %}
+  {% if conf.notes %}
+  <section id="notes" class="scroll-mt-6 {% if conf.topic_fit %}mt-6 pt-6 border-t border-gray-200{% endif %}">
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
+    <div class="max-w-3xl font-serif text-gray-700 leading-relaxed">{{ prose(conf.notes) }}</div>
+  </section>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Conference details -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-gray-500">
   <div class="flex flex-wrap gap-2">
@@ -297,8 +329,6 @@
     {% if conf.attendees %}<span class="border border-gray-300 rounded px-2 py-0.5 flex items-center gap-1">{{ size_icon(conf) }} {{ '{:,}'.format(conf.attendees) }} attendees</span>{% endif %}
     {% if conf.lang %}<span class="border border-gray-300 rounded px-2 py-0.5">Language: {{ conf.lang }}</span>{% endif %}
   </div>
-  {% if conf.topic_fit %}<div class="mt-2">Topic fit: {{ conf.topic_fit }}</div>{% endif %}
-  {% if conf.notes %}<div class="mt-1">Notes: {{ conf.notes }}</div>{% endif %}
   {% if conf.cfp %}
   <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
     <span class="font-medium text-gray-600">CFP</span>
