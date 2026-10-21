@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from datetime import date
-from datetime import timedelta
 from enum import StrEnum, auto
 
 from confetti.conference_view import ConferenceTimeline
@@ -225,6 +224,7 @@ class TimelineBar:
     left_pct: float
     width_pct: float
     status: str
+    dates_presumed: bool = False
 
 
 class CfpBarStatus(StrEnum):
@@ -320,13 +320,13 @@ def build_cfp_gantt(
     # Skipped conferences (whole or just this edition) sink to the bottom.
     bars_raw.sort(key=lambda bar: (bar.status == CfpBarStatus.skipped, bar.cfp_close))
 
+    today_pct = (today - range_start).days / total_days * 100
+    return bars_raw, _month_markers(range_start, range_end, total_days), today_pct
+
+
+def _month_markers(range_start: date, range_end: date, total_days: int) -> list[MonthMarker]:
     months: list[MonthMarker] = []
-    month_cursor = date(range_start.year, range_start.month, 1)
-    if month_cursor < range_start:
-        if month_cursor.month == 12:
-            month_cursor = date(month_cursor.year + 1, 1, 1)
-        else:
-            month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
+    month_cursor = range_start
     while month_cursor <= range_end:
         left = (month_cursor - range_start).days / total_days * 100
         months.append(MonthMarker(label=_MONTH_NAMES[month_cursor.month], position_pct=left))
@@ -334,37 +334,52 @@ def build_cfp_gantt(
             month_cursor = date(month_cursor.year + 1, 1, 1)
         else:
             month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
-
-    today_pct = (today - range_start).days / total_days * 100
-    return bars_raw, months, today_pct
+    return months
 
 
-def build_gantt(timeline: list[ConferenceTimeline], today: date) -> tuple[list[TimelineBar], list[MonthMarker]]:
-    """Build horizontal Gantt bars for conferences with submitted/accepted/waitlisted talks."""
-    active_columns = {KanbanColumn.submitted, KanbanColumn.accepted}
-    candidates = [t for t in timeline if t.kanban_column in active_columns and t.conf_start and not t.conf.skip]
+def build_gantt(
+    timeline: list[ConferenceTimeline], today: date, months_ahead: int = 13
+) -> tuple[list[TimelineBar], list[MonthMarker], float]:
+    """Build Gantt bars for this month and the 12 after it: submitted, accepted or planned conferences.
 
-    if not candidates:
-        return [], []
+    Thirteen months, so this month's conference of next year is in view while I plan for it.
 
-    bars_raw = []
-    for t in candidates:
-        assert t.conf_start is not None
-        conf_end = t.conf_end or t.conf_start
-        year_entry = t.conf.years.get(t.talk_year or t.conf_start.year)
-        status = str(year_entry.status) if year_entry and year_entry.status else "submitted"
-        bars_raw.append((t.conf, t.conf_start, conf_end, status))
-
-    bars_raw.sort(key=lambda b: b[1])
-
-    range_start = bars_raw[0][1] - timedelta(days=7)
-    range_end = max(b[2] for b in bars_raw) + timedelta(days=7)
+    Planned means the edition is marked `planned` and has no talks written down yet, so it shows
+    where I mean to apply once the CFP opens, on its presumed dates if the real ones aren't known.
+    Returns the bars, the month markers and today's position in percent.
+    """
+    range_start = date(today.year, today.month, 1)
+    range_end = date(
+        today.year + (today.month - 1 + months_ahead) // 12, (today.month - 1 + months_ahead) % 12 + 1, 1
+    )
     total_days = (range_end - range_start).days or 1
 
-    bars = []
-    for conf, conf_start, conf_end, status in bars_raw:
-        left = (conf_start - range_start).days / total_days * 100
-        width = max((conf_end - conf_start).days + 1, 1) / total_days * 100
+    active_columns = {KanbanColumn.submitted, KanbanColumn.accepted}
+    bars_raw: list[tuple[Conference, date, date, str, bool]] = []
+    for item in timeline:
+        if item.conf.skip or item.skipped:
+            continue
+        if item.kanban_column in active_columns and item.conf_start:
+            year_entry = item.conf.years.get(item.talk_year or item.conf_start.year)
+            status = str(year_entry.status) if year_entry and year_entry.status else "submitted"
+            bars_raw.append((item.conf, item.conf_start, item.conf_end or item.conf_start, status, False))
+            continue
+        next_event = item.conf.next_event
+        edition_entry = item.conf.years.get(next_event.edition_year) if next_event.edition_year else None
+        if edition_entry and edition_entry.planned and not edition_entry.talks and next_event.conference_start:
+            conf_start = next_event.conference_start
+            conf_end = next_event.conference_end or conf_start
+            bars_raw.append((item.conf, conf_start, conf_end, "planned", not next_event.conference_start_is_factual))
+
+    bars: list[TimelineBar] = []
+    for conf, conf_start, conf_end, status, dates_presumed in sorted(bars_raw, key=lambda bar: bar[1]):
+        # Keep only conferences that overlap the window.
+        if conf_end < range_start or conf_start >= range_end:
+            continue
+        visible_start = max(conf_start, range_start)
+        visible_end = min(conf_end, range_end)
+        left = (visible_start - range_start).days / total_days * 100
+        width = max((visible_end - visible_start).days + 1, 1) / total_days * 100
         width = max(width, 2.0)
         bars.append(
             TimelineBar(
@@ -374,24 +389,9 @@ def build_gantt(timeline: list[ConferenceTimeline], today: date) -> tuple[list[T
                 left_pct=left,
                 width_pct=width,
                 status=status,
+                dates_presumed=dates_presumed,
             )
         )
 
-    # Month markers
-    months: list[MonthMarker] = []
-    month_cursor = date(range_start.year, range_start.month, 1)
-    if month_cursor < range_start:
-        if month_cursor.month == 12:
-            month_cursor = date(month_cursor.year + 1, 1, 1)
-        else:
-            month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
-
-    while month_cursor <= range_end:
-        left = (month_cursor - range_start).days / total_days * 100
-        months.append(MonthMarker(label=_MONTH_NAMES[month_cursor.month], position_pct=left))
-        if month_cursor.month == 12:
-            month_cursor = date(month_cursor.year + 1, 1, 1)
-        else:
-            month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
-
-    return bars, months
+    today_pct = (today - range_start).days / total_days * 100
+    return bars, _month_markers(range_start, range_end, total_days), today_pct

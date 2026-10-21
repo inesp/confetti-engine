@@ -21,7 +21,7 @@ def _conf(years: dict[int, YearEntry | None]) -> Conference:
 
 
 def _statuses(confs: list[Conference]) -> list[str]:
-    bars, _ = build_gantt(build_timeline(confs), TODAY)
+    bars, _, _ = build_gantt(build_timeline(confs), TODAY)
     return [bar.status for bar in bars]
 
 
@@ -55,3 +55,32 @@ def test_accepted_edition_is_accepted():
     )
     result = _statuses([conf])
     assert result == ["accepted"]
+
+
+@freeze_time("2026-10-12")
+def test_planned_edition_shows_as_planned():
+    conf = _conf({2027: YearEntry(conference_start=date(2027, 3, 10), planned=True)})
+    result = _statuses([conf])
+    assert result == ["planned"]
+
+
+@freeze_time("2026-10-12")
+def test_planned_edition_with_a_talk_shows_the_talk_status():
+    conf = _conf(
+        {
+            2027: YearEntry(
+                conference_start=date(2027, 3, 10),
+                planned=True,
+                talks=[TalkEntry(talk="talk-a", status=TalkStatus.submitted, title="Talk A")],
+            ),
+        }
+    )
+    result = _statuses([conf])
+    assert result == ["submitted"]
+
+
+@freeze_time("2026-10-12")
+def test_conference_beyond_twelve_months_is_left_out():
+    conf = _conf({2027: YearEntry(conference_start=date(2027, 11, 3), planned=True)})
+    result = _statuses([conf])
+    assert result == []

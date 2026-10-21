@@ -264,6 +264,7 @@ class YearEntry(BaseModel):
     travel: Travel | None = None
     vacation_days: int = 0
     skip: bool = False
+    planned: bool = False  # I mean to apply once the CFP opens; ignored once talks are written down
 
     @property
     def bookings(self) -> dict[str, Booking]:

@@ -77,7 +77,7 @@ def index() -> str:
     cfp_closed.sort(key=lambda t: t.action_date.isoformat() if t.action_date else "9999")
     coming_up.extend(cfp_closed)
 
-    gantt_bars, gantt_months = build_gantt(timeline, today)
+    gantt_bars, gantt_months, gantt_today_pct = build_gantt(timeline, today)
     cfp_bars, cfp_months, cfp_today_pct = build_cfp_gantt(timeline, today)
     yearly_dots, yearly_months = build_yearly_dot_timeline(conferences, today.year)
 
@@ -92,6 +92,7 @@ def index() -> str:
         today=today,
         gantt_bars=gantt_bars,
         gantt_months=gantt_months,
+        gantt_today_pct=gantt_today_pct,
         cfp_bars=cfp_bars,
         cfp_months=cfp_months,
         cfp_today_pct=cfp_today_pct,
