@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% set tile_colors = {
+  "rose": "bg-rose-50 border-rose-200",
+  "amber": "bg-amber-50 border-amber-200",
+  "sky": "bg-sky-50 border-sky-200",
+  "violet": "bg-violet-50 border-violet-200",
+  "emerald": "bg-emerald-50 border-emerald-200",
+  "orange": "bg-orange-50 border-orange-200",
+} %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {% for item in facts %}
+  <div class="rounded-xl border-2 {{ tile_colors[item.color] }} p-6">
+    <div class="text-4xl mb-3">{{ item.emoji }}</div>
+    <div class="text-2xl font-bold text-gray-900 mb-1">{{ item.big }}</div>
+    <div class="text-base text-gray-600">{{ item.aside }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

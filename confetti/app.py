@@ -12,6 +12,7 @@ from confetti.routes.home import home_bp
 from confetti.yaml.yaml_parser import load_and_validate_conferences
 from confetti.routes.past import past_bp
 from confetti.routes.scout import scout_bp
+from confetti.routes.fun_facts import fun_facts_bp
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(scout_bp)
     app.register_blueprint(discover_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(fun_facts_bp)
 
     @app.context_processor
     def inject_validation_errors():

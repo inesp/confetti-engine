@@ -64,6 +64,7 @@ class TalkEntry(BaseModel):
     talk_start: datetime | None = None
     talk_duration: int = 0
     schedule_notes: str = ""
+    keynote: bool = False
 
     @property
     def talk_end(self) -> datetime | None:
@@ -265,6 +266,7 @@ class YearEntry(BaseModel):
     vacation_days: int = 0
     skip: bool = False
     planned: bool = False  # I mean to apply once the CFP opens; ignored once talks are written down
+    invited: bool = False  # the organizers asked me to submit
 
     @property
     def bookings(self) -> dict[str, Booking]:
